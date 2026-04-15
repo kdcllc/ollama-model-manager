@@ -5,7 +5,7 @@
 [![Node.js 18+](https://img.shields.io/badge/node-%3E%3D18.0.0-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![GitHub stars](https://img.shields.io/github/stars/kdcllc/ollama-model-manager?style=social)](https://github.com/kdcllc/ollama-model-manager/stargazers)
 
-[![Stand With Israel](https://raw.githubusercontent.com/kdcllc/ollama-model-manager/main/img/IStandWithIsrael.png)](https://github.com/kdcllc/ollama-model-manager)
+[![Stand With Israel](https://raw.githubusercontent.com/kdcllc/ollama-model-manager/master/img/IStandWithIsrael.png)](https://github.com/kdcllc/ollama-model-manager)
 
 CLI and web UI for managing local Ollama models with hardware-aware recommendations and optimization guidance.
 
