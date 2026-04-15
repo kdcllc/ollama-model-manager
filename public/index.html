@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ollama Model Manager</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="bg-orb bg-orb-left"></div>
+    <div class="bg-orb bg-orb-right"></div>
+
+    <header class="hero">
+      <h1>Ollama Model Manager</h1>
+      <p>Manage local models, update Ollama, and keep model guidance in one place.</p>
+      <div class="status-row">
+        <span id="healthBadge" class="pill pill-muted">Checking Ollama status...</span>
+        <button id="refreshBtn" class="btn">Refresh Models</button>
+        <button id="updateOllamaBtn" class="btn btn-warning">Update Ollama Runtime</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="panel">
+        <h2>System Profile and Recommendations</h2>
+        <div id="systemSummary" class="hint">Loading system profile...</div>
+        <div id="setupGuidance" class="hint"></div>
+        <div class="recommendation-grid">
+          <div>
+            <h3>Recommended Models</h3>
+            <ul id="recommendedModels" class="mini-list"></ul>
+          </div>
+          <div>
+            <h3>Advanced Models</h3>
+            <ul id="advancedModels" class="mini-list"></ul>
+          </div>
+        </div>
+        <div class="inline-form">
+          <select id="kvCacheModeSelect">
+            <option value="adaptive">Adaptive</option>
+            <option value="q8_0">q8_0</option>
+            <option value="f16">f16</option>
+          </select>
+          <select id="flashAttentionModeSelect">
+            <option value="auto">Flash Attention Auto</option>
+            <option value="on">Flash Attention On</option>
+            <option value="off">Flash Attention Off</option>
+          </select>
+          <button id="saveOptimizationBtn" class="btn btn-primary" type="button">
+            Save Optimization Preferences
+          </button>
+        </div>
+        <div class="env-preview">
+          <h3>Effective Environment Variables</h3>
+          <p class="hint">These are the exact runtime values your current options map to.</p>
+          <pre id="effectiveEnvVars" class="env-code">Calculating effective environment variables...</pre>
+          <pre id="effectiveEnvExport" class="env-code"></pre>
+          <pre id="effectiveEnvSystemd" class="env-code"></pre>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>NVIDIA Monitor</h2>
+        <div class="status-row">
+          <span id="gpuStatusPill" class="pill pill-muted">Checking GPU...</span>
+          <button id="toggleGpuLiveBtn" class="btn" type="button">Start Live</button>
+          <button id="refreshGpuBtn" class="btn" type="button">Refresh GPU Now</button>
+        </div>
+        <div id="gpuPanel" class="gpu-panel"></div>
+      </section>
+
+      <section class="panel">
+        <h2>Install or Update Model</h2>
+        <form id="pullForm" class="inline-form">
+          <input
+            id="pullName"
+            type="text"
+            placeholder="Example: llama3.2:3b-instruct-q4_K_M"
+            required
+          />
+          <button type="submit" class="btn btn-primary">Pull or Update</button>
+        </form>
+        <p class="hint">Tip: Pulling an existing model updates it to the latest available tag.</p>
+      </section>
+
+      <section class="panel">
+        <h2>Installed Models</h2>
+        <div id="modelsGrid" class="cards"></div>
+      </section>
+
+      <section class="panel" id="detailsPanel">
+        <h2>Model Details</h2>
+        <div id="detailsContent" class="details-empty">No model selected.</div>
+      </section>
+
+      <section class="panel">
+        <h2>Activity</h2>
+        <pre id="activityLog" class="log"></pre>
+      </section>
+    </main>
+
+    <template id="modelCardTemplate">
+      <article class="card">
+        <div class="card-head">
+          <h3 class="model-name"></h3>
+          <span class="model-size"></span>
+        </div>
+        <p class="model-description"></p>
+        <div class="tags-row model-best-for"></div>
+        <div class="card-meta">
+          <span class="model-updated"></span>
+        </div>
+        <div class="actions-row">
+          <button class="btn btn-small view-btn">Details</button>
+          <button class="btn btn-small btn-primary pull-btn">Update</button>
+          <button class="btn btn-small btn-danger delete-btn">Delete</button>
+        </div>
+      </article>
+    </template>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

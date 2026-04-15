@@ -1,0 +1,886 @@
+{
+  "phi3:latest": {
+    "description": "Phi-3 is a family of lightweight 3B (Mini) and 14B (Medium) state-of-the-art open models by Microsoft.",
+    "notes": "",
+    "bestFor": [
+      "Low-latency local assistant"
+    ],
+    "notIdealFor": [
+      "Large-context deep reasoning"
+    ],
+    "extraTips": "",
+    "updatedAt": "2026-04-15T10:21:54.768Z",
+    "libraryUrl": "https://ollama.com/library/phi3",
+    "libraryFetchedAt": "2026-04-15T10:21:54.766Z",
+    "libraryFetchError": "",
+    "availableTags": [
+      "latest",
+      "3.8b",
+      "14b"
+    ],
+    "rawDetails": {
+      "family": "phi3",
+      "families": [
+        "phi3"
+      ],
+      "parameterSize": "3.8B",
+      "quantizationLevel": "Q4_0",
+      "format": "gguf",
+      "capabilities": [
+        "completion"
+      ]
+    },
+    "rawDetailsFetchedAt": "2026-04-15T10:21:54.766Z"
+  },
+  "qwen2.5-coder:14b": {
+    "description": "The latest series of Code-Specific Qwen models, with significant improvements in code generation, code reasoning, and code fixing.",
+    "bestFor": [
+      "Code generation",
+      "Code explanation and debugging",
+      "Complex reasoning",
+      "Multilingual chat",
+      "Tool-augmented assistants"
+    ],
+    "extraTips": "",
+    "libraryUrl": "https://ollama.com/library/qwen2.5-coder",
+    "libraryFetchedAt": "2026-04-15T10:21:54.556Z",
+    "libraryFetchError": "",
+    "availableTags": [
+      "latest",
+      "0.5b",
+      "1.5b",
+      "3b",
+      "7b",
+      "14b",
+      "32b"
+    ],
+    "rawDetails": {
+      "family": "qwen2",
+      "families": [
+        "qwen2"
+      ],
+      "parameterSize": "14.8B",
+      "quantizationLevel": "Q4_K_M",
+      "format": "gguf",
+      "capabilities": [
+        "completion",
+        "tools",
+        "insert"
+      ]
+    },
+    "rawDetailsFetchedAt": "2026-04-15T10:21:54.556Z",
+    "updatedAt": "2026-04-15T10:21:54.559Z",
+    "notIdealFor": [
+      "General non-technical conversation",
+      "Ultra-fast short chat responses",
+      "Resource-constrained devices"
+    ]
+  },
+  "gpt-oss:latest": {
+    "description": "OpenAI’s open-weight models designed for powerful reasoning, agentic tasks, and versatile developer use cases.",
+    "bestFor": [
+      "Code generation",
+      "Complex reasoning",
+      "Tool-augmented assistants"
+    ],
+    "extraTips": "",
+    "libraryUrl": "https://ollama.com/library/gpt-oss",
+    "libraryFetchedAt": "2026-04-15T10:23:07.444Z",
+    "libraryFetchError": "",
+    "availableTags": [
+      "latest",
+      "20b",
+      "120b",
+      "20b-cloud",
+      "120b-cloud"
+    ],
+    "rawDetails": {
+      "family": "gptoss",
+      "families": [
+        "gptoss"
+      ],
+      "parameterSize": "20.9B",
+      "quantizationLevel": "MXFP4",
+      "format": "gguf",
+      "capabilities": [
+        "completion",
+        "tools",
+        "thinking"
+      ]
+    },
+    "rawDetailsFetchedAt": "2026-04-15T10:23:07.444Z",
+    "updatedAt": "2026-04-15T10:23:07.447Z",
+    "notIdealFor": [
+      "General non-technical conversation",
+      "Ultra-fast short chat responses",
+      "Resource-constrained devices"
+    ]
+  },
+  "qwen2.5-coder:latest": {
+    "description": "The latest series of Code-Specific Qwen models, with significant improvements in code generation, code reasoning, and code fixing.",
+    "bestFor": [
+      "Code generation",
+      "Code explanation and debugging",
+      "Complex reasoning",
+      "Multilingual chat",
+      "Tool-augmented assistants"
+    ],
+    "extraTips": "",
+    "libraryUrl": "https://ollama.com/library/qwen2.5-coder",
+    "libraryFetchedAt": "2026-04-15T10:31:07.175Z",
+    "libraryFetchError": "",
+    "availableTags": [
+      "latest",
+      "0.5b",
+      "1.5b",
+      "3b",
+      "7b",
+      "14b",
+      "32b"
+    ],
+    "rawDetails": {
+      "family": "qwen2",
+      "families": [
+        "qwen2"
+      ],
+      "parameterSize": "7.6B",
+      "quantizationLevel": "Q4_K_M",
+      "format": "gguf",
+      "capabilities": [
+        "completion",
+        "tools",
+        "insert"
+      ]
+    },
+    "rawDetailsFetchedAt": "2026-04-15T10:31:07.175Z",
+    "updatedAt": "2026-04-15T10:31:07.177Z",
+    "notIdealFor": [
+      "General non-technical conversation",
+      "Ultra-fast short chat responses"
+    ]
+  },
+  "mannix/llamax3-8b-alpaca:iq3_s": {
+    "description": "LLaMAX is a multilingual language model, developed through continued pre-training on Llama3, and supports over 100 languages",
+    "bestFor": [
+      "Multilingual chat"
+    ],
+    "extraTips": "",
+    "libraryUrl": "https://ollama.com/mannix/llamax3-8b-alpaca",
+    "libraryFetchedAt": "2026-04-15T10:31:13.442Z",
+    "libraryFetchError": "",
+    "availableTags": [
+      "latest",
+      "q3_k_m",
+      "q3_k_l",
+      "q4_0",
+      "q4_1",
+      "q4_k_s",
+      "q4_k_m",
+      "q5_1",
+      "q5_k_s",
+      "q5_k_m",
+      "q6_k",
+      "q8_0",
+      "iq3_xs",
+      "iq3_s",
+      "iq4_xs",
+      "iq4_nl"
+    ],
+    "rawDetails": {
+      "family": "llama",
+      "families": [
+        "llama"
+      ],
+      "parameterSize": "8.0B",
+      "quantizationLevel": "IQ3_S",
+      "format": "gguf",
+      "capabilities": [
+        "completion"
+      ]
+    },
+    "rawDetailsFetchedAt": "2026-04-15T10:31:13.442Z",
+    "updatedAt": "2026-04-15T10:31:13.444Z",
+    "notIdealFor": []
+  },
+  "codellama:13b": {
+    "description": "A large language model that can use text prompts to generate and discuss code.",
+    "bestFor": [
+      "Code generation",
+      "Code explanation and debugging"
+    ],
+    "extraTips": "",
+    "libraryUrl": "https://ollama.com/library/codellama",
+    "libraryFetchedAt": "2026-04-15T10:24:25.569Z",
+    "libraryFetchError": "",
+    "availableTags": [
+      "latest",
+      "7b",
+      "13b",
+      "34b",
+      "70b"
+    ],
+    "rawDetails": {
+      "family": "llama",
+      "families": [],
+      "parameterSize": "13B",
+      "quantizationLevel": "Q4_0",
+      "format": "gguf",
+      "capabilities": [
+        "completion"
+      ]
+    },
+    "rawDetailsFetchedAt": "2026-04-15T10:24:25.569Z",
+    "updatedAt": "2026-04-15T10:24:25.571Z",
+    "notIdealFor": [
+      "General non-technical conversation"
+    ]
+  },
+  "qwen2.5-coder:1.5b": {
+    "description": "The latest series of Code-Specific Qwen models, with significant improvements in code generation, code reasoning, and code fixing.",
+    "bestFor": [
+      "Code generation",
+      "Code explanation and debugging",
+      "Complex reasoning",
+      "Multilingual chat",
+      "Tool-augmented assistants"
+    ],
+    "notIdealFor": [
+      "General non-technical conversation",
+      "Ultra-fast short chat responses"
+    ],
+    "extraTips": "",
+    "libraryUrl": "https://ollama.com/library/qwen2.5-coder",
+    "libraryFetchedAt": "2026-04-15T10:30:46.289Z",
+    "libraryFetchError": "",
+    "availableTags": [
+      "latest",
+      "0.5b",
+      "1.5b",
+      "3b",
+      "7b",
+      "14b",
+      "32b"
+    ],
+    "rawDetails": {
+      "family": "qwen2",
+      "families": [
+        "qwen2"
+      ],
+      "parameterSize": "1.5B",
+      "quantizationLevel": "Q4_K_M",
+      "format": "gguf",
+      "capabilities": [
+        "completion",
+        "tools",
+        "insert"
+      ]
+    },
+    "rawDetailsFetchedAt": "2026-04-15T10:30:46.289Z",
+    "updatedAt": "2026-04-15T10:30:46.292Z"
+  },
+  "llama3.2:latest": {
+    "description": "Meta's Llama 3.2 goes small with 1B and 3B models.",
+    "bestFor": [
+      "Low-latency local assistant",
+      "Tool-augmented assistants"
+    ],
+    "notIdealFor": [
+      "Large-context deep reasoning"
+    ],
+    "extraTips": "",
+    "libraryUrl": "https://ollama.com/library/llama3.2",
+    "libraryFetchedAt": "2026-04-15T10:30:52.789Z",
+    "libraryFetchError": "",
+    "availableTags": [
+      "latest",
+      "1b",
+      "3b"
+    ],
+    "rawDetails": {
+      "family": "llama",
+      "families": [
+        "llama"
+      ],
+      "parameterSize": "3.2B",
+      "quantizationLevel": "Q4_K_M",
+      "format": "gguf",
+      "capabilities": [
+        "completion",
+        "tools"
+      ]
+    },
+    "rawDetailsFetchedAt": "2026-04-15T10:30:52.789Z",
+    "updatedAt": "2026-04-15T10:30:52.791Z"
+  },
+  "mxbai-embed-large:latest": {
+    "description": "State-of-the-art large embedding model from mixedbread.ai",
+    "bestFor": [
+      "Vector embeddings and retrieval"
+    ],
+    "notIdealFor": [
+      "Direct chat responses",
+      "Long-form text generation",
+      "Resource-constrained devices"
+    ],
+    "extraTips": "",
+    "libraryUrl": "https://ollama.com/library/mxbai-embed-large",
+    "libraryFetchedAt": "2026-04-15T10:31:10.111Z",
+    "libraryFetchError": "",
+    "availableTags": [
+      "latest",
+      "335m"
+    ],
+    "rawDetails": {
+      "family": "bert",
+      "families": [
+        "bert"
+      ],
+      "parameterSize": "334M",
+      "quantizationLevel": "F16",
+      "format": "gguf",
+      "capabilities": [
+        "embedding"
+      ]
+    },
+    "rawDetailsFetchedAt": "2026-04-15T10:31:10.111Z",
+    "updatedAt": "2026-04-15T10:31:10.113Z"
+  },
+  "qwq:32b": {
+    "description": "QwQ is the reasoning model of the Qwen series.",
+    "bestFor": [
+      "Complex reasoning",
+      "Multilingual chat",
+      "Tool-augmented assistants"
+    ],
+    "notIdealFor": [
+      "Ultra-fast short chat responses",
+      "Resource-constrained devices"
+    ],
+    "extraTips": "",
+    "libraryUrl": "https://ollama.com/library/qwq",
+    "libraryFetchedAt": "2026-04-15T10:31:11.949Z",
+    "libraryFetchError": "",
+    "availableTags": [
+      "latest",
+      "32b"
+    ],
+    "rawDetails": {
+      "family": "qwen2",
+      "families": [
+        "qwen2"
+      ],
+      "parameterSize": "32.8B",
+      "quantizationLevel": "Q4_K_M",
+      "format": "gguf",
+      "capabilities": [
+        "completion",
+        "tools"
+      ]
+    },
+    "rawDetailsFetchedAt": "2026-04-15T10:31:11.949Z",
+    "updatedAt": "2026-04-15T10:31:11.950Z"
+  },
+  "qwen2.5-coder:32b": {
+    "description": "The latest series of Code-Specific Qwen models, with significant improvements in code generation, code reasoning, and code fixing.",
+    "bestFor": [
+      "Code generation",
+      "Code explanation and debugging",
+      "Complex reasoning",
+      "Multilingual chat",
+      "Tool-augmented assistants"
+    ],
+    "notIdealFor": [
+      "General non-technical conversation",
+      "Ultra-fast short chat responses",
+      "Resource-constrained devices"
+    ],
+    "extraTips": "",
+    "libraryUrl": "https://ollama.com/library/qwen2.5-coder",
+    "libraryFetchedAt": "2026-04-15T10:31:16.302Z",
+    "libraryFetchError": "",
+    "availableTags": [
+      "latest",
+      "0.5b",
+      "1.5b",
+      "3b",
+      "7b",
+      "14b",
+      "32b"
+    ],
+    "rawDetails": {
+      "family": "qwen2",
+      "families": [
+        "qwen2"
+      ],
+      "parameterSize": "32.8B",
+      "quantizationLevel": "Q4_K_M",
+      "format": "gguf",
+      "capabilities": [
+        "completion",
+        "tools",
+        "insert"
+      ]
+    },
+    "rawDetailsFetchedAt": "2026-04-15T10:31:16.302Z",
+    "updatedAt": "2026-04-15T10:31:16.303Z"
+  },
+  "llama3.1:latest": {
+    "description": "Llama 3.1 is a new state-of-the-art model from Meta available in 8B, 70B and 405B parameter sizes.",
+    "bestFor": [
+      "Tool-augmented assistants"
+    ],
+    "notIdealFor": [],
+    "extraTips": "",
+    "libraryUrl": "https://ollama.com/library/llama3.1",
+    "libraryFetchedAt": "2026-04-15T10:31:19.238Z",
+    "libraryFetchError": "",
+    "availableTags": [
+      "latest",
+      "8b",
+      "70b",
+      "405b"
+    ],
+    "rawDetails": {
+      "family": "llama",
+      "families": [
+        "llama"
+      ],
+      "parameterSize": "8.0B",
+      "quantizationLevel": "Q4_K_M",
+      "format": "gguf",
+      "capabilities": [
+        "completion",
+        "tools"
+      ]
+    },
+    "rawDetailsFetchedAt": "2026-04-15T10:31:19.238Z",
+    "updatedAt": "2026-04-15T10:31:19.240Z"
+  },
+  "llama3.2-vision:latest": {
+    "description": "Llama 3.2 Vision is a collection of instruction-tuned image reasoning generative models in 11B and 90B sizes.",
+    "bestFor": [
+      "Complex reasoning"
+    ],
+    "notIdealFor": [
+      "Ultra-fast short chat responses"
+    ],
+    "extraTips": "",
+    "libraryUrl": "https://ollama.com/library/llama3.2-vision",
+    "libraryFetchedAt": "2026-04-15T10:31:21.864Z",
+    "libraryFetchError": "",
+    "availableTags": [
+      "latest",
+      "11b",
+      "90b"
+    ],
+    "rawDetails": {
+      "family": "mllama",
+      "families": [
+        "mllama"
+      ],
+      "parameterSize": "10.7B",
+      "quantizationLevel": "Q4_K_M",
+      "format": "gguf",
+      "capabilities": [
+        "completion",
+        "vision"
+      ]
+    },
+    "rawDetailsFetchedAt": "2026-04-15T10:31:21.864Z",
+    "updatedAt": "2026-04-15T10:31:21.865Z"
+  },
+  "qwen2:72b": {
+    "description": "Qwen2 is a new series of large language models from Alibaba group",
+    "bestFor": [
+      "Multilingual chat",
+      "Tool-augmented assistants"
+    ],
+    "notIdealFor": [
+      "Resource-constrained devices"
+    ],
+    "extraTips": "",
+    "libraryUrl": "https://ollama.com/library/qwen2",
+    "libraryFetchedAt": "2026-04-15T10:31:27.339Z",
+    "libraryFetchError": "",
+    "availableTags": [
+      "latest",
+      "0.5b",
+      "1.5b",
+      "7b",
+      "72b"
+    ],
+    "rawDetails": {
+      "family": "qwen2",
+      "families": [
+        "qwen2"
+      ],
+      "parameterSize": "72.7B",
+      "quantizationLevel": "Q4_0",
+      "format": "gguf",
+      "capabilities": [
+        "completion",
+        "tools"
+      ]
+    },
+    "rawDetailsFetchedAt": "2026-04-15T10:31:27.339Z",
+    "updatedAt": "2026-04-15T10:31:27.341Z"
+  },
+  "qwen2.5-coder:3b": {
+    "description": "The latest series of Code-Specific Qwen models, with significant improvements in code generation, code reasoning, and code fixing.",
+    "bestFor": [
+      "Code generation",
+      "Code explanation and debugging",
+      "Complex reasoning",
+      "Multilingual chat",
+      "Tool-augmented assistants"
+    ],
+    "notIdealFor": [
+      "General non-technical conversation",
+      "Ultra-fast short chat responses"
+    ],
+    "extraTips": "",
+    "libraryUrl": "https://ollama.com/library/qwen2.5-coder",
+    "libraryFetchedAt": "2026-04-15T10:31:32.175Z",
+    "libraryFetchError": "",
+    "availableTags": [
+      "latest",
+      "0.5b",
+      "1.5b",
+      "3b",
+      "7b",
+      "14b",
+      "32b"
+    ],
+    "rawDetails": {
+      "family": "qwen2",
+      "families": [
+        "qwen2"
+      ],
+      "parameterSize": "3.1B",
+      "quantizationLevel": "Q4_K_M",
+      "format": "gguf",
+      "capabilities": [
+        "completion",
+        "tools",
+        "insert"
+      ]
+    },
+    "rawDetailsFetchedAt": "2026-04-15T10:31:32.175Z",
+    "updatedAt": "2026-04-15T10:31:32.176Z"
+  },
+  "qwen2.5-coder:0.5b": {
+    "description": "The latest series of Code-Specific Qwen models, with significant improvements in code generation, code reasoning, and code fixing.",
+    "bestFor": [
+      "Code generation",
+      "Code explanation and debugging",
+      "Complex reasoning",
+      "Multilingual chat",
+      "Tool-augmented assistants"
+    ],
+    "notIdealFor": [
+      "General non-technical conversation",
+      "Ultra-fast short chat responses",
+      "Resource-constrained devices"
+    ],
+    "extraTips": "",
+    "libraryUrl": "https://ollama.com/library/qwen2.5-coder",
+    "libraryFetchedAt": "2026-04-15T10:31:36.780Z",
+    "libraryFetchError": "",
+    "availableTags": [
+      "latest",
+      "0.5b",
+      "1.5b",
+      "3b",
+      "7b",
+      "14b",
+      "32b"
+    ],
+    "rawDetails": {
+      "family": "qwen2",
+      "families": [
+        "qwen2"
+      ],
+      "parameterSize": "494.03M",
+      "quantizationLevel": "Q4_K_M",
+      "format": "gguf",
+      "capabilities": [
+        "completion",
+        "tools",
+        "insert"
+      ]
+    },
+    "rawDetailsFetchedAt": "2026-04-15T10:31:36.781Z",
+    "updatedAt": "2026-04-15T10:31:36.783Z"
+  },
+  "phi4-reasoning:latest": {
+    "description": "Phi 4 reasoning and reasoning plus are 14-billion parameter open-weight reasoning models that rival much larger models on complex reasoning tasks.",
+    "bestFor": [
+      "Complex reasoning",
+      "Low-latency local assistant"
+    ],
+    "notIdealFor": [
+      "Ultra-fast short chat responses",
+      "Resource-constrained devices",
+      "Large-context deep reasoning"
+    ],
+    "extraTips": "",
+    "libraryUrl": "https://ollama.com/library/phi4-reasoning",
+    "libraryFetchedAt": "2026-04-15T10:31:48.640Z",
+    "libraryFetchError": "",
+    "availableTags": [
+      "latest",
+      "14b"
+    ],
+    "rawDetails": {
+      "family": "phi3",
+      "families": [
+        "phi3"
+      ],
+      "parameterSize": "14.7B",
+      "quantizationLevel": "Q4_K_M",
+      "format": "gguf",
+      "capabilities": [
+        "completion"
+      ]
+    },
+    "rawDetailsFetchedAt": "2026-04-15T10:31:48.640Z",
+    "updatedAt": "2026-04-15T10:31:48.642Z"
+  },
+  "mistral:latest": {
+    "description": "The 7B model released by Mistral AI, updated to version 0.3.",
+    "bestFor": [
+      "Tool-augmented assistants"
+    ],
+    "notIdealFor": [],
+    "extraTips": "",
+    "libraryUrl": "https://ollama.com/library/mistral",
+    "libraryFetchedAt": "2026-04-15T10:31:54.774Z",
+    "libraryFetchError": "",
+    "availableTags": [
+      "latest",
+      "7b"
+    ],
+    "rawDetails": {
+      "family": "llama",
+      "families": [
+        "llama"
+      ],
+      "parameterSize": "7.2B",
+      "quantizationLevel": "Q4_K_M",
+      "format": "gguf",
+      "capabilities": [
+        "completion",
+        "tools"
+      ]
+    },
+    "rawDetailsFetchedAt": "2026-04-15T10:31:54.774Z",
+    "updatedAt": "2026-04-15T10:31:54.776Z"
+  },
+  "nomic-embed-text:137m-v1.5-fp16": {
+    "description": "A high-performing open embedding model with a large token context window.",
+    "bestFor": [
+      "Vector embeddings and retrieval"
+    ],
+    "notIdealFor": [
+      "Direct chat responses",
+      "Long-form text generation",
+      "Resource-constrained devices"
+    ],
+    "extraTips": "",
+    "libraryUrl": "https://ollama.com/library/nomic-embed-text",
+    "libraryFetchedAt": "2026-04-15T10:32:05.867Z",
+    "libraryFetchError": "",
+    "availableTags": [
+      "latest",
+      "v1.5",
+      "137m-v1.5-fp16"
+    ],
+    "rawDetails": {
+      "family": "nomic-bert",
+      "families": [
+        "nomic-bert"
+      ],
+      "parameterSize": "137M",
+      "quantizationLevel": "F16",
+      "format": "gguf",
+      "capabilities": [
+        "embedding"
+      ]
+    },
+    "rawDetailsFetchedAt": "2026-04-15T10:32:05.867Z",
+    "updatedAt": "2026-04-15T10:32:05.870Z"
+  },
+  "deepseek-coder-v2:latest": {
+    "description": "An open-source Mixture-of-Experts code language model that achieves performance comparable to GPT4-Turbo in code-specific tasks.",
+    "bestFor": [
+      "Code generation",
+      "Code explanation and debugging"
+    ],
+    "notIdealFor": [
+      "General non-technical conversation",
+      "Resource-constrained devices"
+    ],
+    "extraTips": "",
+    "libraryUrl": "https://ollama.com/library/deepseek-coder-v2",
+    "libraryFetchedAt": "2026-04-15T10:32:08.652Z",
+    "libraryFetchError": "",
+    "availableTags": [
+      "latest",
+      "16b",
+      "236b"
+    ],
+    "rawDetails": {
+      "family": "deepseek2",
+      "families": [
+        "deepseek2"
+      ],
+      "parameterSize": "15.7B",
+      "quantizationLevel": "Q4_0",
+      "format": "gguf",
+      "capabilities": [
+        "completion",
+        "insert"
+      ]
+    },
+    "rawDetailsFetchedAt": "2026-04-15T10:32:08.652Z",
+    "updatedAt": "2026-04-15T10:32:08.655Z"
+  },
+  "freehuntx/qwen3-coder:14b": {
+    "description": "Get up and running with large language models.",
+    "bestFor": [
+      "Code generation",
+      "Code explanation and debugging",
+      "Multilingual chat",
+      "Tool-augmented assistants"
+    ],
+    "notIdealFor": [
+      "General non-technical conversation",
+      "Resource-constrained devices"
+    ],
+    "extraTips": "",
+    "libraryUrl": "https://ollama.com/freehuntx/qwen3-coder",
+    "libraryFetchedAt": "2026-04-15T10:32:18.400Z",
+    "libraryFetchError": "",
+    "availableTags": [
+      "8b",
+      "14b",
+      "30b"
+    ],
+    "rawDetails": {
+      "family": "qwen3",
+      "families": [
+        "qwen3"
+      ],
+      "parameterSize": "14.8B",
+      "quantizationLevel": "Q4_K_M",
+      "format": "gguf",
+      "capabilities": [
+        "completion",
+        "tools"
+      ]
+    },
+    "rawDetailsFetchedAt": "2026-04-15T10:32:18.400Z",
+    "updatedAt": "2026-04-15T10:32:18.402Z"
+  },
+  "nomic-embed-text:latest": {
+    "description": "A high-performing open embedding model with a large token context window.",
+    "bestFor": [
+      "Vector embeddings and retrieval"
+    ],
+    "notIdealFor": [
+      "Direct chat responses",
+      "Long-form text generation",
+      "Resource-constrained devices"
+    ],
+    "extraTips": "",
+    "libraryUrl": "https://ollama.com/library/nomic-embed-text",
+    "libraryFetchedAt": "2026-04-15T10:32:26.434Z",
+    "libraryFetchError": "",
+    "availableTags": [
+      "latest",
+      "v1.5",
+      "137m-v1.5-fp16"
+    ],
+    "rawDetails": {
+      "family": "nomic-bert",
+      "families": [
+        "nomic-bert"
+      ],
+      "parameterSize": "137M",
+      "quantizationLevel": "F16",
+      "format": "gguf",
+      "capabilities": [
+        "embedding"
+      ]
+    },
+    "rawDetailsFetchedAt": "2026-04-15T10:32:26.434Z",
+    "updatedAt": "2026-04-15T10:32:26.437Z"
+  },
+  "phi4:latest": {
+    "description": "Phi-4 is a 14B parameter, state-of-the-art open model from Microsoft.",
+    "bestFor": [
+      "Low-latency local assistant"
+    ],
+    "notIdealFor": [
+      "Resource-constrained devices",
+      "Large-context deep reasoning"
+    ],
+    "extraTips": "",
+    "libraryUrl": "https://ollama.com/library/phi4",
+    "libraryFetchedAt": "2026-04-15T10:35:05.209Z",
+    "libraryFetchError": "",
+    "availableTags": [
+      "latest",
+      "14b"
+    ],
+    "rawDetails": {
+      "family": "phi3",
+      "families": [
+        "phi3"
+      ],
+      "parameterSize": "14.7B",
+      "quantizationLevel": "Q4_K_M",
+      "format": "gguf",
+      "capabilities": [
+        "completion"
+      ]
+    },
+    "rawDetailsFetchedAt": "2026-04-15T10:35:05.209Z",
+    "updatedAt": "2026-04-15T10:35:05.211Z"
+  },
+  "gemma3:4b": {
+    "description": "The current, most capable model that runs on a single GPU.",
+    "bestFor": [],
+    "notIdealFor": [],
+    "extraTips": "",
+    "libraryUrl": "https://ollama.com/library/gemma3",
+    "libraryFetchedAt": "2026-04-15T10:35:36.803Z",
+    "libraryFetchError": "",
+    "availableTags": [
+      "latest",
+      "270m",
+      "1b",
+      "4b",
+      "12b",
+      "27b",
+      "4b-cloud",
+      "12b-cloud",
+      "27b-cloud"
+    ],
+    "rawDetails": {
+      "family": "gemma3",
+      "families": [
+        "gemma3"
+      ],
+      "parameterSize": "4.3B",
+      "quantizationLevel": "Q4_K_M",
+      "format": "gguf",
+      "capabilities": [
+        "completion",
+        "vision"
+      ]
+    },
+    "rawDetailsFetchedAt": "2026-04-15T10:35:36.803Z",
+    "updatedAt": "2026-04-15T10:35:36.804Z"
+  }
+}

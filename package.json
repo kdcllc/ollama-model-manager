@@ -1,0 +1,17 @@
+{
+  "name": "local-ollama-dev",
+  "version": "1.0.0",
+  "description": "Local Ollama model manager web interface",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
+}

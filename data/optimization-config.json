@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "userPreferences": {
+    "kvCacheMode": "adaptive",
+    "flashAttentionMode": "auto",
+    "gpuPanelLiveDefault": false,
+    "gpuPanelIntervalMs": 5000,
+    "cpuSuggestionMode": "dual"
+  },
+  "systemProfile": {
+    "provider": "nvidia-cuda",
+    "cudaAvailable": true,
+    "gpuAvailable": true,
+    "gpuCount": 1,
+    "driverVersion": "535.288.01",
+    "flashAttentionSupported": true,
+    "kvCacheStrategy": "adaptive",
+    "checkedAt": "2026-04-15T10:53:58.943Z",
+    "error": "",
+    "ollamaBaseUrl": "http://127.0.0.1:11434",
+    "updatedAt": "2026-04-15T10:53:58.953Z"
+  },
+  "modelOverrides": {},
+  "updatedAt": "2026-04-15T10:53:58.953Z"
+}
