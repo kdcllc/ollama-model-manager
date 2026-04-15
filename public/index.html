@@ -85,7 +85,25 @@
 
       <section class="panel">
         <h2>Installed Models</h2>
-        <div id="modelsGrid" class="cards"></div>
+        <div class="models-toolbar">
+          <div class="models-toolbar-main">
+            <input id="modelSearchInput" type="search" placeholder="Search models, tags, tiers..." />
+            <button id="clearModelSearchBtn" class="btn btn-small" type="button">Clear</button>
+            <select id="modelSortSelect" aria-label="Sort models">
+              <option value="updated-desc">Newest Updated</option>
+              <option value="name-asc">Name (A-Z)</option>
+              <option value="size-desc">Size (Largest)</option>
+              <option value="size-asc">Size (Smallest)</option>
+            </select>
+            <div class="view-toggle" role="group" aria-label="Model display mode">
+              <button id="viewCardsBtn" class="btn btn-small btn-primary" type="button">Cards</button>
+              <button id="viewListBtn" class="btn btn-small" type="button">Compact</button>
+            </div>
+          </div>
+          <div id="modelFilterChips" class="chips-row"></div>
+          <div id="modelsSummary" class="hint"></div>
+        </div>
+        <div id="modelsGrid" class="model-groups"></div>
       </section>
 
       <section class="panel" id="detailsPanel">

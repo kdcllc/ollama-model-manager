@@ -1,5 +1,6 @@
 const state = {
   models: [],
+  modelSearchIndex: [],
   selectedModel: null,
   busy: false,
   capabilities: null,
@@ -8,7 +9,15 @@ const state = {
   gpuStatus: null,
   gpuLive: false,
   gpuPollIntervalMs: 5000,
-  gpuPollTimer: null
+  gpuPollTimer: null,
+  searchDebounceTimer: null,
+  uiQuery: "",
+  uiSort: "updated-desc",
+  uiViewMode: "cards",
+  uiTierFilter: "all",
+  uiBestForFilter: "",
+  modelRenderExpanded: false,
+  modelRenderLimit: 180
 };
 
 const el = {
@@ -34,7 +43,14 @@ const el = {
   gpuStatusPill: document.getElementById("gpuStatusPill"),
   toggleGpuLiveBtn: document.getElementById("toggleGpuLiveBtn"),
   refreshGpuBtn: document.getElementById("refreshGpuBtn"),
-  gpuPanel: document.getElementById("gpuPanel")
+  gpuPanel: document.getElementById("gpuPanel"),
+  modelSearchInput: document.getElementById("modelSearchInput"),
+  clearModelSearchBtn: document.getElementById("clearModelSearchBtn"),
+  modelSortSelect: document.getElementById("modelSortSelect"),
+  viewCardsBtn: document.getElementById("viewCardsBtn"),
+  viewListBtn: document.getElementById("viewListBtn"),
+  modelFilterChips: document.getElementById("modelFilterChips"),
+  modelsSummary: document.getElementById("modelsSummary")
 };
 
 init();
@@ -126,6 +142,101 @@ function wireEvents() {
   el.refreshGpuBtn.addEventListener("click", async () => {
     await loadGpuStatus(true);
   });
+
+  if (el.modelSearchInput) {
+    el.modelSearchInput.addEventListener("input", (event) => {
+      const nextValue = String(event.target?.value || "").trim();
+      if (nextValue === state.uiQuery) {
+        return;
+      }
+
+      state.uiQuery = nextValue;
+      state.modelRenderExpanded = false;
+      if (state.searchDebounceTimer) {
+        clearTimeout(state.searchDebounceTimer);
+      }
+
+      state.searchDebounceTimer = setTimeout(() => {
+        updateModelsDisplay();
+      }, 150);
+    });
+
+    el.modelSearchInput.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        if (el.modelSearchInput.value) {
+          el.modelSearchInput.value = "";
+        }
+        state.uiQuery = "";
+        state.modelRenderExpanded = false;
+        updateModelsDisplay();
+      }
+    });
+  }
+
+  if (el.clearModelSearchBtn) {
+    el.clearModelSearchBtn.addEventListener("click", () => {
+      if (el.modelSearchInput) {
+        el.modelSearchInput.value = "";
+      }
+      state.uiQuery = "";
+      state.uiBestForFilter = "";
+      state.uiTierFilter = "all";
+      state.modelRenderExpanded = false;
+      updateModelsDisplay();
+    });
+  }
+
+  if (el.modelSortSelect) {
+    el.modelSortSelect.addEventListener("change", (event) => {
+      state.uiSort = String(event.target?.value || "updated-desc");
+      state.modelRenderExpanded = false;
+      updateModelsDisplay();
+    });
+  }
+
+  if (el.viewCardsBtn) {
+    el.viewCardsBtn.addEventListener("click", () => {
+      if (state.uiViewMode === "cards") {
+        return;
+      }
+      state.uiViewMode = "cards";
+      syncViewModeButtons();
+      updateModelsDisplay();
+    });
+  }
+
+  if (el.viewListBtn) {
+    el.viewListBtn.addEventListener("click", () => {
+      if (state.uiViewMode === "list") {
+        return;
+      }
+      state.uiViewMode = "list";
+      syncViewModeButtons();
+      updateModelsDisplay();
+    });
+  }
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "/") {
+      return;
+    }
+
+    const target = event.target;
+    const isTypingSurface =
+      target instanceof HTMLInputElement ||
+      target instanceof HTMLTextAreaElement ||
+      target instanceof HTMLSelectElement ||
+      target?.isContentEditable;
+
+    if (isTypingSurface || !el.modelSearchInput) {
+      return;
+    }
+
+    event.preventDefault();
+    el.modelSearchInput.focus();
+    el.modelSearchInput.select();
+  });
 }
 
 async function refreshAll() {
@@ -166,8 +277,13 @@ async function loadModels(options = {}) {
   try {
     const payload = await apiGet("/api/models");
     state.models = payload.models || [];
+    state.modelSearchIndex = state.models.map((model, index) => ({
+      model,
+      index,
+      searchText: normalizeModelSearchText(model)
+    }));
     state.capabilities = payload.capabilities || state.capabilities;
-    renderModels();
+    updateModelsDisplay();
 
     if (refreshSelected && state.selectedModel) {
       const found = state.models.find((m) => m.name === state.selectedModel);
@@ -306,59 +422,370 @@ function renderList(container, items, emptyText) {
   });
 }
 
-function renderModels() {
+function syncViewModeButtons() {
+  if (!el.viewCardsBtn || !el.viewListBtn) {
+    return;
+  }
+
+  const cardsActive = state.uiViewMode === "cards";
+  el.viewCardsBtn.classList.toggle("btn-primary", cardsActive);
+  el.viewListBtn.classList.toggle("btn-primary", !cardsActive);
+}
+
+function normalizeModelSearchText(model) {
+  const metadata = model.metadata || {};
+  const bestFor = Array.isArray(metadata.bestFor) ? metadata.bestFor.join(" ") : "";
+  const notIdealFor = Array.isArray(metadata.notIdealFor) ? metadata.notIdealFor.join(" ") : "";
+
+  return [
+    model.name,
+    metadata.description,
+    bestFor,
+    notIdealFor,
+    model.suggestionTier,
+    formatBytes(model.size || 0)
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
+function applyModelFilters(indexedModels) {
+  const query = state.uiQuery.toLowerCase();
+
+  return indexedModels.filter((entry) => {
+    const model = entry.model;
+
+    if (query && !entry.searchText.includes(query)) {
+      return false;
+    }
+
+    if (state.uiTierFilter !== "all") {
+      const tier = String(model.suggestionTier || "").toLowerCase();
+      if (state.uiTierFilter === "recommended" && !tier.startsWith("recommended")) {
+        return false;
+      }
+      if (state.uiTierFilter === "advanced" && !tier.startsWith("advanced")) {
+        return false;
+      }
+      if (state.uiTierFilter === "gpu" && !tier.includes("gpu")) {
+        return false;
+      }
+      if (state.uiTierFilter === "cpu" && !tier.includes("cpu")) {
+        return false;
+      }
+    }
+
+    if (state.uiBestForFilter) {
+      const bestFor = Array.isArray(model.metadata?.bestFor) ? model.metadata.bestFor : [];
+      if (!bestFor.includes(state.uiBestForFilter)) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+}
+
+function applyModelSort(filteredEntries) {
+  const sorted = [...filteredEntries];
+
+  sorted.sort((left, right) => {
+    const l = left.model;
+    const r = right.model;
+
+    if (state.uiSort === "name-asc") {
+      const value = String(l.name || "").localeCompare(String(r.name || ""));
+      return value || left.index - right.index;
+    }
+
+    if (state.uiSort === "size-desc") {
+      const value = (r.size || 0) - (l.size || 0);
+      return value || left.index - right.index;
+    }
+
+    if (state.uiSort === "size-asc") {
+      const value = (l.size || 0) - (r.size || 0);
+      return value || left.index - right.index;
+    }
+
+    const leftUpdated = l.modifiedAt ? new Date(l.modifiedAt).getTime() : 0;
+    const rightUpdated = r.modifiedAt ? new Date(r.modifiedAt).getTime() : 0;
+    const value = rightUpdated - leftUpdated;
+    return value || left.index - right.index;
+  });
+
+  return sorted;
+}
+
+function groupModels(models) {
+  const groups = {
+    recommended: [],
+    advanced: [],
+    other: []
+  };
+
+  for (const model of models) {
+    const tier = String(model.suggestionTier || "").toLowerCase();
+    if (tier.startsWith("recommended")) {
+      groups.recommended.push(model);
+      continue;
+    }
+    if (tier.startsWith("advanced")) {
+      groups.advanced.push(model);
+      continue;
+    }
+    groups.other.push(model);
+  }
+
+  return groups;
+}
+
+function getTopBestForTags(limit = 8) {
+  const counts = new Map();
+  for (const model of state.models) {
+    const tags = Array.isArray(model.metadata?.bestFor) ? model.metadata.bestFor : [];
+    for (const tag of tags) {
+      counts.set(tag, (counts.get(tag) || 0) + 1);
+    }
+  }
+
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, limit)
+    .map(([tag]) => tag);
+}
+
+function renderFilterChips() {
+  if (!el.modelFilterChips) {
+    return;
+  }
+
+  const topTags = getTopBestForTags();
+  const chips = [
+    { label: "All tiers", type: "tier", value: "all" },
+    { label: "Recommended", type: "tier", value: "recommended" },
+    { label: "Advanced", type: "tier", value: "advanced" },
+    { label: "GPU", type: "tier", value: "gpu" },
+    { label: "CPU", type: "tier", value: "cpu" },
+    ...topTags.map((tag) => ({ label: tag, type: "bestFor", value: tag }))
+  ];
+
+  el.modelFilterChips.innerHTML = chips
+    .map((chip) => {
+      const active =
+        (chip.type === "tier" && state.uiTierFilter === chip.value) ||
+        (chip.type === "bestFor" && state.uiBestForFilter === chip.value);
+
+      return `<button class="chip${active ? " chip-active" : ""}" data-chip-type="${escapeHtml(chip.type)}" data-chip-value="${escapeHtml(chip.value)}" type="button">${escapeHtml(chip.label)}</button>`;
+    })
+    .join("");
+
+  el.modelFilterChips.querySelectorAll(".chip").forEach((chip) => {
+    chip.addEventListener("click", () => {
+      const chipType = chip.getAttribute("data-chip-type") || "";
+      const chipValue = chip.getAttribute("data-chip-value") || "";
+
+      if (chipType === "tier") {
+        state.uiTierFilter = state.uiTierFilter === chipValue ? "all" : chipValue;
+      } else if (chipType === "bestFor") {
+        state.uiBestForFilter = state.uiBestForFilter === chipValue ? "" : chipValue;
+      }
+
+      state.modelRenderExpanded = false;
+      updateModelsDisplay();
+    });
+  });
+}
+
+function renderModelsSummary(totalCount, matchedCount, shownCount) {
+  if (!el.modelsSummary) {
+    return;
+  }
+
+  const filters = [];
+  if (state.uiQuery) {
+    filters.push(`query: "${state.uiQuery}"`);
+  }
+  if (state.uiTierFilter !== "all") {
+    filters.push(`tier: ${state.uiTierFilter}`);
+  }
+  if (state.uiBestForFilter) {
+    filters.push(`tag: ${state.uiBestForFilter}`);
+  }
+
+  const pieces = [
+    `${matchedCount} of ${totalCount} models`,
+    filters.length ? `Filters: ${filters.join(" | ")}` : ""
+  ].filter(Boolean);
+
+  if (shownCount < matchedCount) {
+    pieces.push(`Showing first ${shownCount}`);
+  }
+
+  const html = [`<span>${escapeHtml(pieces.join(". "))}</span>`];
+  if (shownCount < matchedCount) {
+    html.push(
+      `<button id="loadMoreModelsBtn" class="btn btn-small" type="button">Load all ${matchedCount} results</button>`
+    );
+  }
+
+  el.modelsSummary.innerHTML = html.join(" ");
+
+  const loadMoreBtn = document.getElementById("loadMoreModelsBtn");
+  if (loadMoreBtn) {
+    loadMoreBtn.addEventListener("click", () => {
+      state.modelRenderExpanded = true;
+      updateModelsDisplay();
+    });
+  }
+}
+
+function createModelCardNode(model) {
+  const fragment = el.modelCardTemplate.content.cloneNode(true);
+  const card = fragment.querySelector(".card");
+  fragment.querySelector(".model-name").textContent = model.name;
+  fragment.querySelector(".model-size").textContent = formatBytes(model.size || 0);
+
+  const description = model.metadata?.description || "No description yet for this model.";
+  fragment.querySelector(".model-description").textContent = description;
+
+  const bestFor = Array.isArray(model.metadata?.bestFor) ? model.metadata.bestFor : [];
+  const tagsNode = fragment.querySelector(".model-best-for");
+  bestFor.slice(0, 3).forEach((item) => {
+    const tag = document.createElement("span");
+    tag.className = "tag";
+    tag.textContent = item;
+    tagsNode.appendChild(tag);
+  });
+
+  if (model.suggestionTier) {
+    const tier = document.createElement("span");
+    tier.className = "tag tag-tier";
+    tier.textContent = model.suggestionTier;
+    tagsNode.appendChild(tier);
+  }
+
+  fragment.querySelector(".model-updated").textContent = model.modifiedAt
+    ? "Updated: " + new Date(model.modifiedAt).toLocaleString()
+    : "Updated: unknown";
+
+  fragment.querySelector(".view-btn").addEventListener("click", () => showDetails(model.name));
+  fragment.querySelector(".pull-btn").addEventListener("click", () => pullModel(model.name));
+  fragment.querySelector(".delete-btn").addEventListener("click", () => deleteModel(model.name));
+
+  if (state.selectedModel === model.name) {
+    card.classList.add("card-selected");
+  }
+
+  return fragment;
+}
+
+function createModelRowNode(model) {
+  const row = document.createElement("article");
+  row.className = "model-row";
+  if (state.selectedModel === model.name) {
+    row.classList.add("model-row-selected");
+  }
+
+  const bestFor = Array.isArray(model.metadata?.bestFor) ? model.metadata.bestFor.slice(0, 2) : [];
+  const tagsHtml = bestFor.map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`).join(" ");
+  const tierHtml = model.suggestionTier
+    ? `<span class="tag tag-tier">${escapeHtml(model.suggestionTier)}</span>`
+    : "";
+
+  row.innerHTML = `
+    <div class="model-row-main">
+      <div class="model-row-title">${escapeHtml(model.name)}</div>
+      <div class="model-row-meta">
+        <span>${escapeHtml(formatBytes(model.size || 0))}</span>
+        <span>${escapeHtml(model.modifiedAt ? new Date(model.modifiedAt).toLocaleString() : "unknown update")}</span>
+      </div>
+      <div class="tags-row">${tagsHtml} ${tierHtml}</div>
+    </div>
+    <div class="actions-row">
+      <button class="btn btn-small view-btn">Details</button>
+      <button class="btn btn-small btn-primary pull-btn">Update</button>
+      <button class="btn btn-small btn-danger delete-btn">Delete</button>
+    </div>
+  `;
+
+  row.querySelector(".view-btn").addEventListener("click", () => showDetails(model.name));
+  row.querySelector(".pull-btn").addEventListener("click", () => pullModel(model.name));
+  row.querySelector(".delete-btn").addEventListener("click", () => deleteModel(model.name));
+
+  return row;
+}
+
+function renderModelGroup(container, label, models) {
+  if (!models.length) {
+    return;
+  }
+
+  const section = document.createElement("section");
+  section.className = "model-group";
+  section.innerHTML = `<div class="model-group-head"><h3>${escapeHtml(label)}</h3><span class="hint">${models.length}</span></div>`;
+
+  const items = document.createElement("div");
+  items.className = state.uiViewMode === "cards" ? "cards" : "model-list";
+
+  for (const model of models) {
+    if (state.uiViewMode === "cards") {
+      items.appendChild(createModelCardNode(model));
+    } else {
+      items.appendChild(createModelRowNode(model));
+    }
+  }
+
+  section.appendChild(items);
+  container.appendChild(section);
+}
+
+function updateModelsDisplay() {
+  syncViewModeButtons();
+  renderFilterChips();
+
   el.modelsGrid.innerHTML = "";
 
   if (!state.models.length) {
+    renderModelsSummary(0, 0, 0);
     el.modelsGrid.innerHTML =
       "<p class='hint'>No installed models found. Pull one above to get started.</p>";
     return;
   }
 
-  for (const model of state.models) {
-    const fragment = el.modelCardTemplate.content.cloneNode(true);
-    const card = fragment.querySelector(".card");
-    fragment.querySelector(".model-name").textContent = model.name;
-    fragment.querySelector(".model-size").textContent = formatBytes(model.size || 0);
+  const filteredEntries = applyModelFilters(state.modelSearchIndex);
+  const sortedEntries = applyModelSort(filteredEntries);
 
-    const description = model.metadata?.description || "No description yet for this model.";
-    fragment.querySelector(".model-description").textContent = description;
+  const matchedCount = sortedEntries.length;
+  const totalCount = state.models.length;
+  const shouldLimit = matchedCount > state.modelRenderLimit && !state.modelRenderExpanded;
+  const visibleEntries = shouldLimit
+    ? sortedEntries.slice(0, state.modelRenderLimit)
+    : sortedEntries;
+  const visibleModels = visibleEntries.map((entry) => entry.model);
 
-    const bestFor = Array.isArray(model.metadata?.bestFor) ? model.metadata.bestFor : [];
-    const tagsNode = fragment.querySelector(".model-best-for");
-    bestFor.slice(0, 3).forEach((item) => {
-      const tag = document.createElement("span");
-      tag.className = "tag";
-      tag.textContent = item;
-      tagsNode.appendChild(tag);
-    });
+  renderModelsSummary(totalCount, matchedCount, visibleModels.length);
 
-    if (model.suggestionTier) {
-      const tier = document.createElement("span");
-      tier.className = "tag tag-tier";
-      tier.textContent = model.suggestionTier;
-      tagsNode.appendChild(tier);
-    }
-
-    fragment.querySelector(".model-updated").textContent = model.modifiedAt
-      ? "Updated: " + new Date(model.modifiedAt).toLocaleString()
-      : "Updated: unknown";
-
-    fragment.querySelector(".view-btn").addEventListener("click", () => showDetails(model.name));
-    fragment.querySelector(".pull-btn").addEventListener("click", () => pullModel(model.name));
-    fragment.querySelector(".delete-btn").addEventListener("click", () => deleteModel(model.name));
-
-    if (state.selectedModel === model.name) {
-      card.style.borderColor = "#29b6f6";
-    }
-
-    el.modelsGrid.appendChild(fragment);
+  if (!visibleModels.length) {
+    el.modelsGrid.innerHTML =
+      "<p class='hint'>No matches found. Try a broader search or clear active filters.</p>";
+    return;
   }
+
+  const grouped = groupModels(visibleModels);
+  renderModelGroup(el.modelsGrid, "Recommended", grouped.recommended);
+  renderModelGroup(el.modelsGrid, "Advanced", grouped.advanced);
+  renderModelGroup(el.modelsGrid, "Other", grouped.other);
+}
+
+function renderModels() {
+  updateModelsDisplay();
 }
 
 async function showDetails(name) {
   state.selectedModel = name;
-  renderModels();
+  updateModelsDisplay();
 
   el.detailsContent.innerHTML = `<p class="hint">Loading details for <strong>${escapeHtml(name)}</strong>...</p>`;
   document.getElementById("detailsPanel").scrollIntoView({ behavior: "smooth", block: "start" });
