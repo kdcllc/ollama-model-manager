@@ -1,6 +1,7 @@
-const { exec, execFile } = require("child_process");
+import { exec, execFile } from "child_process";
+import { CommandResult } from "../types";
 
-function runCommand(command, timeoutMs) {
+export function runCommand(command: string, timeoutMs: number): Promise<CommandResult> {
   return new Promise((resolve) => {
     exec(
       command,
@@ -11,9 +12,11 @@ function runCommand(command, timeoutMs) {
       },
       (error, stdout, stderr) => {
         if (error) {
+          const rawCode = (error as { code?: number | string }).code;
+          const exitCode = typeof rawCode === "number" ? rawCode : Number(rawCode || 1);
           resolve({
             ok: false,
-            exitCode: error.code || 1,
+            exitCode,
             stdout: stdout || "",
             stderr: stderr || error.message
           });
@@ -31,7 +34,11 @@ function runCommand(command, timeoutMs) {
   });
 }
 
-function runCommandFile(file, args, timeoutMs) {
+export function runCommandFile(
+  file: string,
+  args: string[] | undefined,
+  timeoutMs: number
+): Promise<CommandResult> {
   return new Promise((resolve) => {
     execFile(
       file,
@@ -42,9 +49,11 @@ function runCommandFile(file, args, timeoutMs) {
       },
       (error, stdout, stderr) => {
         if (error) {
+          const rawCode = (error as { code?: number | string }).code;
+          const exitCode = typeof rawCode === "number" ? rawCode : Number(rawCode || 1);
           resolve({
             ok: false,
-            exitCode: error.code || 1,
+            exitCode,
             stdout: stdout || "",
             stderr: stderr || error.message
           });
@@ -61,8 +70,3 @@ function runCommandFile(file, args, timeoutMs) {
     );
   });
 }
-
-module.exports = {
-  runCommand,
-  runCommandFile
-};

@@ -1,11 +1,29 @@
+import type { Request, Response, Router } from "express";
+import type { MetadataStore } from "../services/metadataStore";
+import type { OllamaClient } from "../services/ollamaClient";
+import type { SystemProbe } from "../services/systemProbe";
+import type { ModelMetadata } from "../types";
+
 const express = require("express");
 const { canonicalName } = require("../services/metadataStore");
 const { fetchLibraryData } = require("../services/libraryFetcher");
 
-function createModelsRouter({ ollamaClient, metadataStore, systemProbe }) {
-  const router = express.Router();
+interface ModelsRouterDeps {
+  ollamaClient: OllamaClient;
+  metadataStore: MetadataStore;
+  systemProbe: SystemProbe;
+}
 
-  router.get("/", async (req, res) => {
+interface HttpError {
+  status?: number;
+  details?: unknown;
+  message?: string;
+}
+
+function createModelsRouter({ ollamaClient, metadataStore, systemProbe }: ModelsRouterDeps): Router {
+  const router: Router = express.Router();
+
+  router.get("/", async (_req: Request, res: Response) => {
     try {
       const models = await ollamaClient.listModels();
       const [merged, capabilities] = await Promise.all([
@@ -18,15 +36,12 @@ function createModelsRouter({ ollamaClient, metadataStore, systemProbe }) {
         suggestionTier: classifySuggestionTier(model.name, capabilities)
       }));
       res.json({ models: enriched, capabilities });
-    } catch (error) {
-      res.status(error.status || 500).json({
-        error: error.message,
-        details: error.details || null
-      });
+    } catch (error: unknown) {
+      handleError(res, error);
     }
   });
 
-  router.get("/:name", async (req, res) => {
+  router.get("/:name", async (req: Request, res: Response) => {
     const name = decodeURIComponent(req.params.name || "").trim();
     if (!name) {
       res.status(400).json({ error: "Model name is required." });
@@ -41,15 +56,12 @@ function createModelsRouter({ ollamaClient, metadataStore, systemProbe }) {
       }
 
       res.json(payload);
-    } catch (error) {
-      res.status(error.status || 500).json({
-        error: error.message,
-        details: error.details || null
-      });
+    } catch (error: unknown) {
+      handleError(res, error);
     }
   });
 
-  router.post("/pull", async (req, res) => {
+  router.post("/pull", async (req: Request, res: Response) => {
     const name = String(req.body?.name || "").trim();
     if (!name) {
       res.status(400).json({ error: "Field name is required." });
@@ -60,15 +72,12 @@ function createModelsRouter({ ollamaClient, metadataStore, systemProbe }) {
       const result = await ollamaClient.pullModel(name);
       const payload = await enrichModelMetadata({ name, ollamaClient, metadataStore });
       res.json({ ok: true, result, model: payload });
-    } catch (error) {
-      res.status(error.status || 500).json({
-        error: error.message,
-        details: error.details || null
-      });
+    } catch (error: unknown) {
+      handleError(res, error);
     }
   });
 
-  router.delete("/:name", async (req, res) => {
+  router.delete("/:name", async (req: Request, res: Response) => {
     const name = decodeURIComponent(req.params.name || "").trim();
     if (!name) {
       res.status(400).json({ error: "Model name is required." });
@@ -78,15 +87,12 @@ function createModelsRouter({ ollamaClient, metadataStore, systemProbe }) {
     try {
       const result = await ollamaClient.deleteModel(name);
       res.json({ ok: true, result });
-    } catch (error) {
-      res.status(error.status || 500).json({
-        error: error.message,
-        details: error.details || null
-      });
+    } catch (error: unknown) {
+      handleError(res, error);
     }
   });
 
-  router.patch("/:name/notes", async (req, res) => {
+  router.patch("/:name/notes", async (req: Request, res: Response) => {
     const name = decodeURIComponent(req.params.name || "").trim();
     if (!name) {
       res.status(400).json({ error: "Model name is required." });
@@ -109,15 +115,12 @@ function createModelsRouter({ ollamaClient, metadataStore, systemProbe }) {
       });
 
       res.json({ ok: true, metadata });
-    } catch (error) {
-      res.status(500).json({
-        error: error.message,
-        details: error.details || null
-      });
+    } catch (error: unknown) {
+      handleError(res, error);
     }
   });
 
-  router.post("/:name/enrich", async (req, res) => {
+  router.post("/:name/enrich", async (req: Request, res: Response) => {
     const name = decodeURIComponent(req.params.name || "").trim();
     if (!name) {
       res.status(400).json({ error: "Model name is required." });
@@ -135,18 +138,18 @@ function createModelsRouter({ ollamaClient, metadataStore, systemProbe }) {
       });
 
       res.json({ ok: true, model: payload });
-    } catch (error) {
-      res.status(error.status || 500).json({
-        error: error.message,
-        details: error.details || null
-      });
+    } catch (error: unknown) {
+      handleError(res, error);
     }
   });
 
   return router;
 }
 
-function classifySuggestionTier(modelName, capabilities) {
+function classifySuggestionTier(
+  modelName: string,
+  capabilities: { cudaAvailable?: boolean } | null
+): string {
   const size = parseParameterSize(modelName);
   if (capabilities?.cudaAvailable) {
     return size >= 14 ? "advanced-gpu" : "recommended-gpu";
@@ -159,7 +162,15 @@ function classifySuggestionTier(modelName, capabilities) {
   return "advanced-cpu";
 }
 
-async function loadModelPayload({ name, ollamaClient, metadataStore }) {
+async function loadModelPayload({
+  name,
+  ollamaClient,
+  metadataStore
+}: {
+  name: string;
+  ollamaClient: OllamaClient;
+  metadataStore: MetadataStore;
+}) {
   const [details, metadata] = await Promise.all([
     ollamaClient.showModel(name),
     metadataStore.getMergedMetadata(name)
@@ -186,8 +197,8 @@ async function enrichModelMetadata({
 
   try {
     libraryData = await fetchLibraryData(libraryUrl);
-  } catch (error) {
-    libraryFetchError = error.message;
+  } catch (error: unknown) {
+    libraryFetchError = getErrorMessage(error);
   }
 
   const fetchedPatch = libraryData
@@ -229,7 +240,7 @@ async function enrichModelMetadata({
   };
 }
 
-function shouldAutoEnrich(metadata) {
+function shouldAutoEnrich(metadata: ModelMetadata): boolean {
   const missingBestFor = !Array.isArray(metadata?.bestFor) || metadata.bestFor.length === 0;
   const missingNotIdealFor =
     !Array.isArray(metadata?.notIdealFor) || metadata.notIdealFor.length === 0;
@@ -242,7 +253,7 @@ function shouldAutoEnrich(metadata) {
   );
 }
 
-function normalizeFetchedString(value) {
+function normalizeFetchedString(value: unknown): string {
   if (value === undefined || value === null) {
     return "";
   }
@@ -250,7 +261,7 @@ function normalizeFetchedString(value) {
   return String(value).trim();
 }
 
-function normalizeFetchedArray(value) {
+function normalizeFetchedArray(value: unknown): string[] {
   if (!Array.isArray(value)) {
     return [];
   }
@@ -260,7 +271,7 @@ function normalizeFetchedArray(value) {
     .filter(Boolean);
 }
 
-function deriveLibraryUrl(modelName) {
+function deriveLibraryUrl(modelName: string): string {
   const base = String(modelName || "").split(":")[0];
   if (base.includes("/")) {
     return `https://ollama.com/${base}`;
@@ -269,7 +280,7 @@ function deriveLibraryUrl(modelName) {
   return `https://ollama.com/library/${base}`;
 }
 
-function summarizeDetails(details) {
+function summarizeDetails(details: Record<string, any>) {
   const ollamaDetails = details?.details || {};
   const capabilities = Array.isArray(details?.capabilities) ? details.capabilities : [];
 
@@ -283,7 +294,15 @@ function summarizeDetails(details) {
   };
 }
 
-function inferMetadataFromModel({ name, details, metadata }) {
+function inferMetadataFromModel({
+  name,
+  details,
+  metadata
+}: {
+  name: string;
+  details: Record<string, any>;
+  metadata: ModelMetadata;
+}): Partial<ModelMetadata> | null {
   const raw = summarizeDetails(details);
   const text = [name, metadata?.description || "", raw.family || "", ...(raw.capabilities || [])]
     .join(" ")
@@ -308,7 +327,7 @@ function inferMetadataFromModel({ name, details, metadata }) {
   pushUnique(notIdealFor, parameterSize >= 14, "Resource-constrained devices");
   pushUnique(notIdealFor, /phi3|small|lightweight/.test(text), "Large-context deep reasoning");
 
-  const patch = {};
+  const patch: Partial<ModelMetadata> = {};
   if (bestFor.length > 0) {
     patch.bestFor = bestFor.slice(0, 6);
   }
@@ -319,7 +338,7 @@ function inferMetadataFromModel({ name, details, metadata }) {
   return Object.keys(patch).length > 0 ? patch : null;
 }
 
-function pushUnique(list, condition, value) {
+function pushUnique(list: string[], condition: boolean, value: string): void {
   if (!condition) {
     return;
   }
@@ -330,19 +349,19 @@ function pushUnique(list, condition, value) {
   }
 }
 
-function parseParameterSize(value) {
+function parseParameterSize(value: unknown): number {
   const match = String(value || "").trim().match(/([0-9]+(?:\.[0-9]+)?)/);
   return match ? Number(match[1]) : 0;
 }
 
-function normalizeString(value) {
+function normalizeString(value: unknown): string {
   if (value === undefined || value === null) {
     return "";
   }
   return String(value).trim();
 }
 
-function normalizeStringArray(value) {
+function normalizeStringArray(value: unknown): string[] {
   if (!Array.isArray(value)) {
     return [];
   }
@@ -355,3 +374,15 @@ function normalizeStringArray(value) {
 module.exports = {
   createModelsRouter
 };
+
+function handleError(res: Response, error: unknown): void {
+  const err = (error ?? {}) as HttpError;
+  res.status(err.status || 500).json({
+    error: getErrorMessage(error),
+    details: err.details || null
+  });
+}
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}

@@ -1,22 +1,25 @@
-const fs = require("fs/promises");
-const path = require("path");
+import fs from "fs/promises";
+import path from "path";
+import { OptimizationConfig } from "../types";
 
-class OptimizationStore {
-  constructor(filePath) {
-    this.filePath = filePath;
-  }
+type OptimizationPatch = Partial<OptimizationConfig["userPreferences"]>;
+
+export class OptimizationStore {
+  constructor(private readonly filePath: string) {}
 
   async init() {
     await ensureFile(this.filePath, `${JSON.stringify(defaultConfig(), null, 2)}\n`);
   }
 
-  async getConfig() {
+  async getConfig(): Promise<OptimizationConfig> {
     const data = await readJson(this.filePath);
+    const defaults = defaultConfig();
+
     return {
-      ...defaultConfig(),
+      ...defaults,
       ...data,
       userPreferences: {
-        ...defaultConfig().userPreferences,
+        ...defaults.userPreferences,
         ...(data.userPreferences || {})
       },
       modelOverrides: {
@@ -25,7 +28,7 @@ class OptimizationStore {
     };
   }
 
-  async updateUserPreferences(patch) {
+  async updateUserPreferences(patch: OptimizationPatch): Promise<OptimizationConfig> {
     const data = await this.getConfig();
     const next = {
       ...data,
@@ -40,7 +43,7 @@ class OptimizationStore {
     return next;
   }
 
-  async updateSystemProfile(systemProfile) {
+  async updateSystemProfile(systemProfile: Record<string, unknown>): Promise<OptimizationConfig> {
     const data = await this.getConfig();
     const next = {
       ...data,
@@ -57,7 +60,7 @@ class OptimizationStore {
   }
 }
 
-function defaultConfig() {
+export function defaultConfig(): OptimizationConfig {
   return {
     schemaVersion: 1,
     userPreferences: {
@@ -73,7 +76,7 @@ function defaultConfig() {
   };
 }
 
-async function ensureFile(filePath, defaultContent) {
+async function ensureFile(filePath: string, defaultContent: string): Promise<void> {
   await fs.mkdir(path.dirname(filePath), { recursive: true });
   try {
     await fs.access(filePath);
@@ -82,30 +85,26 @@ async function ensureFile(filePath, defaultContent) {
   }
 }
 
-async function readJson(filePath) {
+async function readJson(filePath: string): Promise<Partial<OptimizationConfig>> {
   const raw = await fs.readFile(filePath, "utf8");
   if (!raw.trim()) {
     return {};
   }
 
   try {
-    return JSON.parse(raw);
-  } catch (error) {
-    throw new Error(`Invalid JSON in ${filePath}: ${error.message}`);
+      return JSON.parse(raw) as Partial<OptimizationConfig>;
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Invalid JSON in ${filePath}: ${message}`);
   }
 }
 
-async function writeJson(filePath, data) {
+async function writeJson(filePath: string, data: OptimizationConfig): Promise<void> {
   await fs.writeFile(filePath, `${JSON.stringify(data, null, 2)}\n`, "utf8");
 }
 
-function omitUndefined(data) {
+function omitUndefined<T extends object>(data: T): Partial<T> {
   return Object.fromEntries(
     Object.entries(data || {}).filter(([, value]) => value !== undefined)
-  );
+  ) as Partial<T>;
 }
-
-module.exports = {
-  OptimizationStore,
-  defaultConfig
-};

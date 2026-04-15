@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "none",
+    "moduleResolution": "classic",
+    "outDir": "dist/public",
+    "rootDir": "public",
+    "sourceMap": true,
+    "strict": false,
+    "skipLibCheck": true,
+    "lib": ["ES2022", "DOM"]
+  },
+  "include": ["public/app.ts"],
+  "exclude": ["node_modules", "dist"]
+}

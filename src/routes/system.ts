@@ -1,11 +1,45 @@
+import type { Request, Response, Router } from "express";
+import type { AppConfig } from "../config";
+import type { MetadataStore } from "../services/metadataStore";
+import type { OllamaClient } from "../services/ollamaClient";
+import type { OptimizationStore } from "../services/optimizationStore";
+import type { SystemProbe } from "../services/systemProbe";
+import type {
+  CpuSuggestionMode,
+  FlashAttentionMode,
+  KvCacheMode,
+  ModelSummary,
+  SystemCapabilities
+} from "../types";
+
 const express = require("express");
 const { runCommand } = require("../services/commandRunner");
 const { fetchLibraryData } = require("../services/libraryFetcher");
 
-function createSystemRouter({ ollamaClient, config, systemProbe, optimizationStore }) {
-  const router = express.Router();
+interface SystemRouterDeps {
+  ollamaClient: OllamaClient;
+  config: AppConfig;
+  systemProbe: SystemProbe;
+  optimizationStore: OptimizationStore;
+}
 
-  router.get("/health", async (req, res) => {
+interface RecommendationResponse {
+  runtimeProfile: "gpu-cuda" | "cpu-only";
+  summary: string;
+  envRecommendation: {
+    OLLAMA_FLASH_ATTENTION: string;
+    OLLAMA_KV_CACHE_TYPE: string;
+  };
+  suggestedModels: {
+    recommended: string[];
+    advanced: string[];
+  };
+}
+
+function createSystemRouter({ ollamaClient, config, systemProbe, optimizationStore }: SystemRouterDeps): Router {
+  const router: Router = express.Router();
+
+  router.get("/health", async (_req: Request, res: Response) => {
     const health = await ollamaClient.health();
     if (!health.ok) {
       res.status(503).json(health);
@@ -33,7 +67,7 @@ function createSystemRouter({ ollamaClient, config, systemProbe, optimizationSto
     });
   });
 
-  router.get("/recommendations", async (req, res) => {
+  router.get("/recommendations", async (_req: Request, res: Response) => {
     try {
       const [capabilities, optimizationConfig, installedModels] = await Promise.all([
         systemProbe.getCapabilities(),
@@ -61,36 +95,36 @@ function createSystemRouter({ ollamaClient, config, systemProbe, optimizationSto
           ]
         }
       });
-    } catch (error) {
-      res.status(500).json({ error: error.message });
+    } catch (error: unknown) {
+      res.status(500).json({ error: getErrorMessage(error) });
     }
   });
 
-  router.get("/gpu-status", async (req, res) => {
+  router.get("/gpu-status", async (_req: Request, res: Response) => {
     try {
       const status = await systemProbe.getGpuStatus();
       res.json(status);
-    } catch (error) {
+    } catch (error: unknown) {
       res.status(500).json({
         ok: false,
         gpuAvailable: false,
         devices: [],
-        error: error.message,
+        error: getErrorMessage(error),
         timestamp: new Date().toISOString()
       });
     }
   });
 
-  router.get("/optimization-config", async (req, res) => {
+  router.get("/optimization-config", async (_req: Request, res: Response) => {
     try {
       const configData = await optimizationStore.getConfig();
       res.json({ ok: true, config: configData });
-    } catch (error) {
-      res.status(500).json({ error: error.message });
+    } catch (error: unknown) {
+      res.status(500).json({ error: getErrorMessage(error) });
     }
   });
 
-  router.patch("/optimization-config", async (req, res) => {
+  router.patch("/optimization-config", async (req: Request, res: Response) => {
     try {
       const next = await optimizationStore.updateUserPreferences({
         kvCacheMode: normalizeMode(req.body?.kvCacheMode, ["adaptive", "q8_0", "f16"]),
@@ -101,12 +135,12 @@ function createSystemRouter({ ollamaClient, config, systemProbe, optimizationSto
       });
 
       res.json({ ok: true, config: next });
-    } catch (error) {
-      res.status(500).json({ error: error.message });
+    } catch (error: unknown) {
+      res.status(500).json({ error: getErrorMessage(error) });
     }
   });
 
-  router.post("/update-ollama", async (req, res) => {
+  router.post("/update-ollama", async (req: Request, res: Response) => {
     if (!config.allowOllamaUpdate) {
       res.status(403).json({
         error: "Ollama update is disabled. Set ALLOW_OLLAMA_UPDATE=true to enable it."
@@ -128,7 +162,7 @@ function createSystemRouter({ ollamaClient, config, systemProbe, optimizationSto
     });
   });
 
-  router.post("/fetch-library", async (req, res) => {
+  router.post("/fetch-library", async (req: Request, res: Response) => {
     const url = String(req.body?.url || "").trim();
     if (!url) {
       res.status(400).json({ error: "Field url is required." });
@@ -138,15 +172,25 @@ function createSystemRouter({ ollamaClient, config, systemProbe, optimizationSto
     try {
       const data = await fetchLibraryData(url);
       res.json(data);
-    } catch (error) {
-      res.status(400).json({ error: error.message });
+    } catch (error: unknown) {
+      res.status(400).json({ error: getErrorMessage(error) });
     }
   });
 
   return router;
 }
 
-function buildRecommendations({ capabilities, userPreferences, installedModels }) {
+function buildRecommendations({
+  capabilities,
+  userPreferences,
+  installedModels
+}: {
+  capabilities: SystemCapabilities;
+  userPreferences: {
+    kvCacheMode?: KvCacheMode;
+  };
+  installedModels: ModelSummary[];
+}): RecommendationResponse {
   const preferences = userPreferences || {};
   const installed = Array.isArray(installedModels) ? installedModels : [];
 
@@ -188,7 +232,15 @@ function buildRecommendations({ capabilities, userPreferences, installedModels }
   };
 }
 
-function resolveKvRecommendation({ kvCacheMode, cudaAvailable, installed }) {
+function resolveKvRecommendation({
+  kvCacheMode,
+  cudaAvailable,
+  installed
+}: {
+  kvCacheMode?: KvCacheMode;
+  cudaAvailable: boolean;
+  installed: ModelSummary[];
+}): "q8_0" | "f16" {
   if (!cudaAvailable) {
     return "f16";
   }
@@ -201,7 +253,7 @@ function resolveKvRecommendation({ kvCacheMode, cudaAvailable, installed }) {
   return hasLargeInstalled ? "q8_0" : "f16";
 }
 
-function splitCpuSuggestions(modelNames) {
+function splitCpuSuggestions(modelNames: string[]): { recommended: string[]; advanced: string[] } {
   const names = Array.isArray(modelNames) ? modelNames : [];
   const recommended = names.filter((name) => extractParameterSize(name) > 0 && extractParameterSize(name) <= 8);
   const advanced = names.filter((name) => !recommended.includes(name));
@@ -219,21 +271,21 @@ function splitCpuSuggestions(modelNames) {
   };
 }
 
-function extractParameterSize(name) {
+function extractParameterSize(name: string): number {
   const match = String(name || "").match(/([0-9]+(?:\.[0-9]+)?)b/i);
   return match ? Number(match[1]) : 0;
 }
 
-function normalizeMode(value, allowed) {
+function normalizeMode<T extends string>(value: unknown, allowed: T[]): T | undefined {
   const input = String(value || "").trim();
   if (!input) {
     return undefined;
   }
 
-  return allowed.includes(input) ? input : undefined;
+  return allowed.includes(input as T) ? (input as T) : undefined;
 }
 
-function normalizeBoolean(value) {
+function normalizeBoolean(value: unknown): boolean | undefined {
   if (typeof value !== "boolean") {
     return undefined;
   }
@@ -241,7 +293,7 @@ function normalizeBoolean(value) {
   return value;
 }
 
-function normalizeInterval(value) {
+function normalizeInterval(value: unknown): number | undefined {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) {
     return undefined;
@@ -253,3 +305,7 @@ function normalizeInterval(value) {
 module.exports = {
   createSystemRouter
 };
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}

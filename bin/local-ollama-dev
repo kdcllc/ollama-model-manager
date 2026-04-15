@@ -1,0 +1,25 @@
+#!/usr/bin/env node
+
+const path = require("path");
+
+const entryPath = path.resolve(__dirname, "..", "dist", "src", "server.js");
+
+let serverModule;
+try {
+  serverModule = require(entryPath);
+} catch (error) {
+  console.error("Failed to load compiled server. Run `npm run build` first.");
+  console.error(error && error.message ? error.message : error);
+  process.exit(1);
+}
+
+if (!serverModule || typeof serverModule.startServer !== "function") {
+  console.error("Compiled server module does not export startServer().");
+  process.exit(1);
+}
+
+serverModule.startServer().catch((error) => {
+  console.error("Failed to start server.");
+  console.error(error && error.message ? error.message : error);
+  process.exit(1);
+});

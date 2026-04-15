@@ -28,11 +28,36 @@ A local web interface for managing your installed Ollama models.
 
 2. Start the app:
 
+   npm run build
    npm start
 
 3. Open:
 
    <http://localhost:3090>
+
+## Run with npx
+
+The package can be executed directly as a CLI command:
+
+   npx local-ollama-dev
+
+This starts the same web server and serves the UI at <http://localhost:3090>.
+
+## TypeScript workflow
+
+- Source is written in TypeScript under src and public.
+- Production runtime files are generated into dist.
+- Useful commands:
+  - npm run typecheck
+  - npm run build
+  - npm start
+
+## Publish workflow
+
+Use a dry run first, then publish when satisfied with metadata and tarball contents:
+
+   npm publish --dry-run
+   npm publish
 
 ## Configuration
 

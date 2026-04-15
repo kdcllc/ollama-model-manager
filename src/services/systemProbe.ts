@@ -1,14 +1,28 @@
-const { runCommandFile } = require("./commandRunner");
+import { runCommandFile } from "./commandRunner";
+import { GpuDevice, GpuStatus, SystemCapabilities } from "../types";
 
-class SystemProbe {
-  constructor({ timeoutMs = 3000, ttlMs = 30000 } = {}) {
-    this.timeoutMs = timeoutMs;
-    this.ttlMs = ttlMs;
-    this.cache = null;
-    this.lastCheckAt = 0;
+export interface SystemProbeOptions {
+  timeoutMs?: number;
+  ttlMs?: number;
+}
+
+export class SystemProbe {
+  private cache: SystemCapabilities | null = null;
+  private lastCheckAt = 0;
+  private gpuCache: GpuStatus | null = null;
+  private gpuCacheAt = 0;
+
+  constructor(private readonly options: SystemProbeOptions = {}) {}
+
+  private get timeoutMs(): number {
+    return this.options.timeoutMs ?? 3000;
   }
 
-  async getCapabilities(forceRefresh = false) {
+  private get ttlMs(): number {
+    return this.options.ttlMs ?? 30000;
+  }
+
+  async getCapabilities(forceRefresh = false): Promise<SystemCapabilities> {
     const now = Date.now();
     if (!forceRefresh && this.cache && now - this.lastCheckAt < this.ttlMs) {
       return this.cache;
@@ -17,7 +31,7 @@ class SystemProbe {
     const gpuStatus = await this.getGpuStatus(forceRefresh);
     const devices = Array.isArray(gpuStatus.devices) ? gpuStatus.devices : [];
 
-    const capabilities = {
+    const capabilities: SystemCapabilities = {
       provider: devices.length > 0 ? "nvidia-cuda" : "cpu",
       cudaAvailable: devices.length > 0,
       gpuAvailable: devices.length > 0,
@@ -34,7 +48,7 @@ class SystemProbe {
     return capabilities;
   }
 
-  async getGpuStatus(forceRefresh = false) {
+  async getGpuStatus(forceRefresh = false): Promise<GpuStatus> {
     if (!forceRefresh && this.gpuCache && Date.now() - this.gpuCacheAt < 4000) {
       return this.gpuCache;
     }
@@ -61,7 +75,7 @@ class SystemProbe {
     );
 
     if (!result.ok) {
-      const unavailable = {
+      const unavailable: GpuStatus = {
         ok: true,
         gpuAvailable: false,
         devices: [],
@@ -80,7 +94,7 @@ class SystemProbe {
       .map(parseGpuCsvLine)
       .filter(Boolean);
 
-    const payload = {
+    const payload: GpuStatus = {
       ok: true,
       gpuAvailable: devices.length > 0,
       devices,
@@ -94,7 +108,7 @@ class SystemProbe {
   }
 }
 
-function parseGpuCsvLine(line) {
+function parseGpuCsvLine(line: string): GpuDevice | null {
   const parts = String(line || "")
     .split(",")
     .map((value) => value.trim());
@@ -122,11 +136,7 @@ function parseGpuCsvLine(line) {
   };
 }
 
-function toNumber(value) {
+function toNumber(value: string | number): number {
   const parsed = Number(String(value || "").trim());
   return Number.isFinite(parsed) ? parsed : 0;
 }
-
-module.exports = {
-  SystemProbe
-};

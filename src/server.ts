@@ -1,14 +1,14 @@
-const path = require("path");
-const express = require("express");
-const config = require("./config");
-const { OllamaClient } = require("./services/ollamaClient");
-const { MetadataStore } = require("./services/metadataStore");
-const { OptimizationStore } = require("./services/optimizationStore");
-const { SystemProbe } = require("./services/systemProbe");
+import path from "path";
+import express from "express";
+import config from "./config";
+import { OllamaClient } from "./services/ollamaClient";
+import { MetadataStore } from "./services/metadataStore";
+import { OptimizationStore } from "./services/optimizationStore";
+import { SystemProbe } from "./services/systemProbe";
 const { createModelsRouter } = require("./routes/models");
 const { createSystemRouter } = require("./routes/system");
 
-async function start() {
+export async function startServer(): Promise<void> {
   const app = express();
 
   app.use(express.json({ limit: "1mb" }));
@@ -54,7 +54,9 @@ async function start() {
   });
 }
 
-start().catch((error) => {
-  console.error("Failed to start server.", error);
-  process.exit(1);
-});
+if (require.main === module) {
+  startServer().catch((error) => {
+    console.error("Failed to start server.", error);
+    process.exit(1);
+  });
+}

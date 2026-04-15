@@ -1,7 +1,15 @@
 const ALLOWED_HOST = "https://ollama.com/";
 const FETCH_TIMEOUT_MS = 15000;
 
-async function fetchLibraryData(url) {
+export interface LibraryData {
+  description: string;
+  bestFor: string[];
+  notIdealFor: string[];
+  extraTips: string;
+  availableTags: string[];
+}
+
+export async function fetchLibraryData(url: string): Promise<LibraryData> {
   if (!url.startsWith(ALLOWED_HOST)) {
     throw new Error(
       "Only https://ollama.com/ URLs are supported for library lookups."
@@ -20,9 +28,11 @@ async function fetchLibraryData(url) {
         "User-Agent": "Mozilla/5.0 ollama-model-manager/1.0"
       }
     });
-  } catch (error) {
-    const reason = error.name === "AbortError" ? "request timed out" : error.message;
-    throw new Error(`Cannot reach ${url}: ${reason}`);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    const errorName = error instanceof Error ? error.name : "Error";
+    const normalizedReason = errorName === "AbortError" ? "request timed out" : message;
+    throw new Error(`Cannot reach ${url}: ${normalizedReason}`);
   } finally {
     clearTimeout(timer);
   }
@@ -35,7 +45,7 @@ async function fetchLibraryData(url) {
   return parsePage(html);
 }
 
-function parsePage(html) {
+function parsePage(html: string): LibraryData {
   const description = extractMetaDescription(html) || extractTextDescription(html);
   const { features, bestFor, notIdealFor } = extractFeatures(html, description);
   const availableTags = extractAvailableTags(html);
@@ -48,7 +58,7 @@ function parsePage(html) {
   return { description, bestFor, notIdealFor, extraTips, availableTags };
 }
 
-function extractMetaDescription(html) {
+function extractMetaDescription(html: string): string {
   const patterns = [
     /property=["']og:description["'][^>]+content=["']([^"']{20,})["']/i,
     /content=["']([^"']{20,})["'][^>]+property=["']og:description["']/i,
@@ -66,7 +76,7 @@ function extractMetaDescription(html) {
   return "";
 }
 
-function extractTextDescription(html) {
+function extractTextDescription(html: string): string {
   const text = stripHtml(html);
   const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
 
@@ -86,7 +96,10 @@ function extractTextDescription(html) {
   return "";
 }
 
-function extractFeatures(html, description) {
+function extractFeatures(
+  html: string,
+  description: string
+): { features: string[]; bestFor: string[]; notIdealFor: string[] } {
   const text = stripHtml(html);
   const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
 
@@ -135,7 +148,7 @@ function extractFeatures(html, description) {
   return { features, bestFor, notIdealFor };
 }
 
-function inferBestFor(description, features) {
+function inferBestFor(description: string, features: string[]): string[] {
   const text = [description || "", ...features].join(" ").toLowerCase();
   const inferred = [];
 
@@ -151,7 +164,7 @@ function inferBestFor(description, features) {
   return inferred;
 }
 
-function inferNotIdealFor(description, features) {
+function inferNotIdealFor(description: string, features: string[]): string[] {
   const text = [description || "", ...features].join(" ").toLowerCase();
   const inferred = [];
 
@@ -164,13 +177,13 @@ function inferNotIdealFor(description, features) {
   return inferred;
 }
 
-function pushWhen(list, condition, value) {
+function pushWhen(list: string[], condition: boolean, value: string): void {
   if (condition) {
     list.push(value);
   }
 }
 
-function dedupeItems(items) {
+function dedupeItems(items: string[]): string[] {
   const seen = new Set();
   const result = [];
 
@@ -192,7 +205,7 @@ function dedupeItems(items) {
   return result;
 }
 
-function extractAvailableTags(html) {
+function extractAvailableTags(html: string): string[] {
   const seen = new Set();
   const tags = [];
 
@@ -210,7 +223,7 @@ function extractAvailableTags(html) {
   return tags;
 }
 
-function stripHtml(html) {
+function stripHtml(html: string): string {
   return html
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
     .replace(/<style[\s\S]*?<\/style>/gi, " ")
@@ -224,7 +237,7 @@ function stripHtml(html) {
     .replace(/\s{2,}/g, "\n");
 }
 
-function decodeEntities(str) {
+function decodeEntities(str: string): string {
   return str
     .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
@@ -241,5 +254,3 @@ function decodeEntities(str) {
       return String.fromCharCode(code);
     });
 }
-
-module.exports = { fetchLibraryData };

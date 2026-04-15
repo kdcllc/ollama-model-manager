@@ -1,22 +1,25 @@
-const fs = require("fs/promises");
-const path = require("path");
+import fs from "fs/promises";
+import path from "path";
+import { ModelMetadata, ModelSummary } from "../types";
 
-class MetadataStore {
-  constructor(catalogPath, userMetadataPath) {
-    this.catalogPath = catalogPath;
-    this.userMetadataPath = userMetadataPath;
-  }
+type MetadataFile = Record<string, ModelMetadata>;
+
+export class MetadataStore {
+  constructor(
+    private readonly catalogPath: string,
+    private readonly userMetadataPath: string
+  ) {}
 
   async init() {
     await ensureFile(this.catalogPath, "{}\n");
     await ensureFile(this.userMetadataPath, "{}\n");
   }
 
-  async getMergedMetadata(name) {
+  async getMergedMetadata(name: string): Promise<ModelMetadata> {
     const key = canonicalName(name);
     const [catalog, userMetadata] = await Promise.all([
-      this.#readJson(this.catalogPath),
-      this.#readJson(this.userMetadataPath)
+      this.#readJson<MetadataFile>(this.catalogPath),
+      this.#readJson<MetadataFile>(this.userMetadataPath)
     ]);
 
     return {
@@ -25,10 +28,10 @@ class MetadataStore {
     };
   }
 
-  async mergeModels(models) {
+  async mergeModels(models: ModelSummary[]): Promise<Array<ModelSummary & { metadata: ModelMetadata }>> {
     const [catalog, userMetadata] = await Promise.all([
-      this.#readJson(this.catalogPath),
-      this.#readJson(this.userMetadataPath)
+      this.#readJson<MetadataFile>(this.catalogPath),
+      this.#readJson<MetadataFile>(this.userMetadataPath)
     ]);
 
     return models.map((model) => {
@@ -43,9 +46,9 @@ class MetadataStore {
     });
   }
 
-  async updateUserMetadata(name, patch) {
+  async updateUserMetadata(name: string, patch: Partial<ModelMetadata>): Promise<ModelMetadata> {
     const key = canonicalName(name);
-    const content = await this.#readJson(this.userMetadataPath);
+    const content = await this.#readJson<MetadataFile>(this.userMetadataPath);
 
     const next = {
       ...(content[key] || {}),
@@ -58,9 +61,9 @@ class MetadataStore {
     return next;
   }
 
-  async updateFetchedMetadata(name, patch) {
+  async updateFetchedMetadata(name: string, patch: Partial<ModelMetadata>): Promise<ModelMetadata> {
     const key = canonicalName(name);
-    const content = await this.#readJson(this.userMetadataPath);
+    const content = await this.#readJson<MetadataFile>(this.userMetadataPath);
     const existing = content[key] || {};
 
     const next = {
@@ -74,26 +77,27 @@ class MetadataStore {
     return next;
   }
 
-  async #readJson(filePath) {
+  async #readJson<T extends object>(filePath: string): Promise<T> {
     const raw = await fs.readFile(filePath, "utf8");
     if (!raw.trim()) {
-      return {};
+      return {} as T;
     }
 
     try {
-      return JSON.parse(raw);
-    } catch (error) {
-      throw new Error(`Invalid JSON in ${filePath}: ${error.message}`);
+      return JSON.parse(raw) as T;
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Invalid JSON in ${filePath}: ${message}`);
     }
   }
 
-  async #writeJson(filePath, data) {
+  async #writeJson(filePath: string, data: object): Promise<void> {
     const json = `${JSON.stringify(data, null, 2)}\n`;
     await fs.writeFile(filePath, json, "utf8");
   }
 }
 
-async function ensureFile(filePath, defaultContent) {
+async function ensureFile(filePath: string, defaultContent: string): Promise<void> {
   await fs.mkdir(path.dirname(filePath), { recursive: true });
   try {
     await fs.access(filePath);
@@ -102,19 +106,14 @@ async function ensureFile(filePath, defaultContent) {
   }
 }
 
-function canonicalName(name) {
+export function canonicalName(name: string): string {
   return String(name || "")
     .trim()
     .toLowerCase();
 }
 
-function omitUndefined(data) {
+function omitUndefined<T extends object>(data: T): Partial<T> {
   return Object.fromEntries(
     Object.entries(data || {}).filter(([, value]) => value !== undefined)
-  );
+  ) as Partial<T>;
 }
-
-module.exports = {
-  MetadataStore,
-  canonicalName
-};
