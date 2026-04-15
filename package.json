@@ -1,12 +1,38 @@
 {
-  "name": "local-ollama-dev",
-  "version": "1.0.0",
-  "description": "Local Ollama model manager web interface",
+  "name": "@kdcllc/ollama-model-manager",
+  "version": "1.0.1",
+  "description": "CLI and web UI for managing local Ollama models with hardware-aware recommendations and optimization guidance",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kdcllc/ollama-model-manager.git"
+  },
+  "homepage": "https://github.com/kdcllc/ollama-model-manager#readme",
+  "bugs": {
+    "url": "https://github.com/kdcllc/ollama-model-manager/issues"
+  },
+  "keywords": [
+    "ollama",
+    "ollama-model-manager",
+    "llm",
+    "local-llm",
+    "model-manager",
+    "ai",
+    "cli",
+    "web-ui",
+    "nvidia",
+    "gpu",
+    "cuda",
+    "optimization"
+  ],
   "main": "dist/src/server.js",
   "types": "dist/src/server.d.ts",
   "type": "commonjs",
   "bin": {
-    "local-ollama-dev": "bin/local-ollama-dev"
+    "ollama-model-manager": "./bin/ollama-model-manager"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "files": [
     "dist",
