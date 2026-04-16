@@ -594,3 +594,50 @@ textarea {
     align-items: stretch;
   }
 }
+
+  /* Sudo password modal */
+  .sudo-modal {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 2rem;
+    color: var(--text);
+    font-family: "Space Grotesk", sans-serif;
+    max-width: 420px;
+    width: 90vw;
+    backdrop-filter: blur(12px);
+  }
+
+  .sudo-modal::backdrop {
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(3px);
+  }
+
+  .sudo-modal h3 {
+    margin: 0 0 0.6rem;
+    font-size: 1.1rem;
+  }
+
+  .sudo-modal-hint {
+    color: var(--muted);
+    font-size: 0.88rem;
+    margin: 0 0 1.2rem;
+    line-height: 1.5;
+  }
+
+  .sudo-modal label {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-bottom: 0.35rem;
+  }
+
+  .sudo-modal input[type="password"] {
+    margin-bottom: 1.2rem;
+  }
+
+  .sudo-modal-actions {
+    display: flex;
+    gap: 0.6rem;
+    justify-content: flex-end;
+  }

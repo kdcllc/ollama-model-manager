@@ -13,7 +13,7 @@ import type {
 } from "../types";
 
 const express = require("express");
-const { runCommand } = require("../services/commandRunner");
+const { runCommand, runCommandWithSudoPassword } = require("../services/commandRunner");
 const { fetchLibraryData } = require("../services/libraryFetcher");
 
 interface SystemRouterDeps {
@@ -181,7 +181,11 @@ function createSystemRouter({
       return;
     }
 
-    const result = await runCommand(config.ollamaUpdateCommand, config.updateTimeoutMs);
+    const rawPassword = req.body?.sudoPassword;
+    const sudoPassword = typeof rawPassword === "string" ? rawPassword.replace(/[\r\n]/g, "") : "";
+    const result = sudoPassword
+      ? await runCommandWithSudoPassword(config.ollamaUpdateCommand, sudoPassword, config.updateTimeoutMs)
+      : await runCommand(config.ollamaUpdateCommand, config.updateTimeoutMs);
     res.status(result.ok ? 200 : 500).json({
       ...result,
       command: config.ollamaUpdateCommand

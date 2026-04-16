@@ -70,15 +70,20 @@ function wireEvents() {
   el.refreshBtn.addEventListener("click", () => refreshAll());
 
   el.updateOllamaBtn.addEventListener("click", async () => {
-    const confirmed = confirm(
-      "Run Ollama update on this machine now? This may take a few minutes."
-    );
-    if (!confirmed) {
+    const openDialog = window.openSudoPasswordDialog;
+    if (typeof openDialog !== "function") {
+      log("Unable to open password dialog component.");
+      return;
+    }
+
+    const sudoPassword = await openDialog();
+    if (sudoPassword === null) {
+      log("Ollama update canceled.");
       return;
     }
 
     await runAction("Updating Ollama runtime...", async () => {
-      const result = await apiPost("/api/system/update-ollama", { confirm: true });
+      const result = await apiPost("/api/system/update-ollama", { confirm: true, sudoPassword });
       log(
         result.ok
           ? "Ollama update completed successfully."
@@ -1085,6 +1090,22 @@ async function runAction(message, action, options = {}) {
     }
   } catch (error) {
     log("Error: " + error.message);
+
+    const payload = error?.payload;
+    if (payload && typeof payload === "object") {
+      if (payload.exitCode !== undefined) {
+        log("exitCode: " + String(payload.exitCode));
+      }
+      if (payload.command) {
+        log("command: " + String(payload.command));
+      }
+      if (payload.stdout) {
+        log("stdout:\n" + String(payload.stdout));
+      }
+      if (payload.stderr) {
+        log("stderr:\n" + String(payload.stderr));
+      }
+    }
   } finally {
     state.busy = false;
     setButtonsDisabled(false);
@@ -1161,7 +1182,16 @@ async function handleResponse(response) {
   const data = text ? tryParseJson(text) : {};
 
   if (!response.ok) {
-    throw new Error(data.error || data.message || `Request failed (${response.status})`);
+    const detail =
+      data?.error ||
+      data?.message ||
+      data?.stderr ||
+      (typeof data?.raw === "string" ? data.raw : "");
+
+    const error = new Error(detail ? `${detail} (HTTP ${response.status})` : `Request failed (HTTP ${response.status})`);
+    error.status = response.status;
+    error.payload = data;
+    throw error;
   }
 
   return data;
