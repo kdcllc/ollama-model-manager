@@ -15,17 +15,16 @@ export interface AppConfig {
 }
 
 const rootDir = path.resolve(__dirname, "..");
+const dataDir =
+  process.env.OLLAMA_MODEL_MANAGER_DATA_DIR ||
+  path.join(process.cwd(), "data");
 
 const config: AppConfig = {
   rootDir,
   port: Number(process.env.PORT || 3090),
   ollamaBaseUrl: process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434",
-  catalogPath:
-    process.env.MODEL_CATALOG_PATH ||
-    path.join(rootDir, "data", "model-catalog.json"),
-  userMetadataPath:
-    process.env.USER_METADATA_PATH ||
-    path.join(rootDir, "data", "user-metadata.json"),
+  catalogPath: process.env.MODEL_CATALOG_PATH || path.join(dataDir, "model-catalog.json"),
+  userMetadataPath: process.env.USER_METADATA_PATH || path.join(dataDir, "user-metadata.json"),
   allowOllamaUpdate: process.env.ALLOW_OLLAMA_UPDATE !== "false",
   ollamaUpdateCommand:
     process.env.OLLAMA_UPDATE_COMMAND ||
@@ -35,7 +34,7 @@ const config: AppConfig = {
   systemProbeTtlMs: Number(process.env.SYSTEM_PROBE_TTL_MS || 30000),
   optimizationConfigPath:
     process.env.OPTIMIZATION_CONFIG_PATH ||
-    path.join(rootDir, "data", "optimization-config.json")
+    path.join(dataDir, "optimization-config.json")
 };
 
 export default config;

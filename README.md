@@ -22,6 +22,7 @@ The application runs as a Node.js server, serves a browser UI on port `3090` by 
 - Detect CUDA availability and switch recommendation profiles between GPU and CPU-only systems.
 - Surface adaptive KV cache and Flash Attention guidance based on installed model sizes.
 - Persist optimization preferences and user notes in local JSON data files.
+- Auto-create local JSON data files on first run when missing.
 - Show live GPU status when `nvidia-smi` is available.
 - Optionally trigger an Ollama update command from the UI or API.
 
@@ -240,14 +241,17 @@ The server reads the following environment variables from [src/config.ts](./src/
 | --- | --- | --- |
 | `PORT` | `3090` | HTTP port for the UI and API server. |
 | `OLLAMA_BASE_URL` | `http://127.0.0.1:11434` | Base URL for the Ollama daemon. |
-| `MODEL_CATALOG_PATH` | `./data/model-catalog.json` | Curated baseline catalog metadata file. |
-| `USER_METADATA_PATH` | `./data/user-metadata.json` | User-edited model notes and overrides. |
+| `OLLAMA_MODEL_MANAGER_DATA_DIR` | `./data` | Base directory for runtime data files, resolved from the current working directory. |
+| `MODEL_CATALOG_PATH` | `<data-dir>/model-catalog.json` | Curated baseline catalog metadata file. |
+| `USER_METADATA_PATH` | `<data-dir>/user-metadata.json` | User-edited model notes and overrides. |
 | `ALLOW_OLLAMA_UPDATE` | `true` | Enables the update endpoint and UI action unless set to `false`. |
 | `OLLAMA_UPDATE_COMMAND` | `curl -fsSL https://ollama.com/install.sh \| sh` | Command executed by the update endpoint. |
 | `OLLAMA_UPDATE_TIMEOUT_MS` | `600000` | Timeout for the update command in milliseconds. |
 | `SYSTEM_PROBE_TIMEOUT_MS` | `3000` | Timeout for system capability probes. |
 | `SYSTEM_PROBE_TTL_MS` | `30000` | Capability cache TTL in milliseconds. |
-| `OPTIMIZATION_CONFIG_PATH` | `./data/optimization-config.json` | Persisted optimization preferences and system profile. |
+| `OPTIMIZATION_CONFIG_PATH` | `<data-dir>/optimization-config.json` | Persisted optimization preferences and system profile. |
+
+Data files are machine-local runtime state and are created automatically at startup when absent. The catalog file is seeded with bundled defaults so model cards have baseline descriptions immediately.
 
 Example:
 
