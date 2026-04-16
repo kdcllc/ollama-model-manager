@@ -1,6 +1,6 @@
 import type { Request, Response, Router } from "express";
 import type { AppConfig } from "../config";
-import type { MetadataStore } from "../services/metadataStore";
+import type { ModelLifecycleStore } from "../services/modelLifecycleStore";
 import type { OllamaClient } from "../services/ollamaClient";
 import type { OptimizationStore } from "../services/optimizationStore";
 import type { SystemProbe } from "../services/systemProbe";
@@ -21,6 +21,7 @@ interface SystemRouterDeps {
   config: AppConfig;
   systemProbe: SystemProbe;
   optimizationStore: OptimizationStore;
+  lifecycleStore: ModelLifecycleStore;
 }
 
 interface RecommendationResponse {
@@ -36,7 +37,13 @@ interface RecommendationResponse {
   };
 }
 
-function createSystemRouter({ ollamaClient, config, systemProbe, optimizationStore }: SystemRouterDeps): Router {
+function createSystemRouter({
+  ollamaClient,
+  config,
+  systemProbe,
+  optimizationStore,
+  lifecycleStore
+}: SystemRouterDeps): Router {
   const router: Router = express.Router();
 
   router.get("/health", async (_req: Request, res: Response) => {
@@ -112,6 +119,25 @@ function createSystemRouter({ ollamaClient, config, systemProbe, optimizationSto
         error: getErrorMessage(error),
         timestamp: new Date().toISOString()
       });
+    }
+  });
+
+  router.get("/running-models", async (_req: Request, res: Response) => {
+    try {
+      const models = await ollamaClient.listRunningModels();
+      res.json({ ok: true, models, count: models.length });
+    } catch (error: unknown) {
+      res.status(500).json({ error: getErrorMessage(error) });
+    }
+  });
+
+  router.get("/lifecycle-activity", async (req: Request, res: Response) => {
+    const limit = Number(req.query.limit || 100);
+    try {
+      const events = await lifecycleStore.listHistory({ limit });
+      res.json({ ok: true, events });
+    } catch (error: unknown) {
+      res.status(500).json({ error: getErrorMessage(error) });
     }
   });
 

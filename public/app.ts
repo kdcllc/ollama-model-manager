@@ -28,6 +28,9 @@ const el = {
   updateOllamaBtn: document.getElementById("updateOllamaBtn"),
   pullForm: document.getElementById("pullForm"),
   pullName: document.getElementById("pullName"),
+  createForm: document.getElementById("createForm"),
+  createName: document.getElementById("createName"),
+  createModelfile: document.getElementById("createModelfile"),
   modelsGrid: document.getElementById("modelsGrid"),
   detailsContent: document.getElementById("detailsContent"),
   activityLog: document.getElementById("activityLog"),
@@ -108,6 +111,29 @@ function wireEvents() {
 
     await showDetails(state.selectedModel || name);
   });
+
+  if (el.createForm) {
+    el.createForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const name = String(el.createName?.value || "").trim();
+      const modelfile = String(el.createModelfile?.value || "").trim();
+
+      if (!name || !modelfile) {
+        log("Custom model name and Modelfile are required.");
+        return;
+      }
+
+      await runAction(`Creating custom model ${name}...`, async () => {
+        const result = await apiPost("/api/models/create", { name, modelfile });
+        log(`Custom model build finished for ${name}.`);
+        state.selectedModel = result.model?.name || name;
+        await loadModels({ refreshSelected: false });
+        await loadRecommendations();
+      });
+
+      await showDetails(state.selectedModel || name);
+    });
+  }
 
   el.saveOptimizationBtn.addEventListener("click", async () => {
     await runAction("Saving optimization preferences...", async () => {

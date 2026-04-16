@@ -8,6 +8,8 @@ export interface AppConfig {
   ollamaBaseUrlIsWslOverride: boolean;
   catalogPath: string;
   userMetadataPath: string;
+  lifecycleStatePath: string;
+  lifecycleHistoryPath: string;
   allowOllamaUpdate: boolean;
   ollamaUpdateCommand: string;
   updateTimeoutMs: number;
@@ -17,6 +19,9 @@ export interface AppConfig {
 }
 
 const rootDir = path.resolve(__dirname, "..");
+const dataDir =
+  process.env.OLLAMA_MODEL_MANAGER_DATA_DIR ||
+  path.join(process.cwd(), "data");
 
 const { url: detectedOllamaBaseUrl, wslOverride } = process.env.OLLAMA_BASE_URL
   ? { url: process.env.OLLAMA_BASE_URL, wslOverride: false }
@@ -27,12 +32,12 @@ const config: AppConfig = {
   port: Number(process.env.PORT || 3090),
   ollamaBaseUrl: detectedOllamaBaseUrl,
   ollamaBaseUrlIsWslOverride: wslOverride,
-  catalogPath:
-    process.env.MODEL_CATALOG_PATH ||
-    path.join(rootDir, "data", "model-catalog.json"),
-  userMetadataPath:
-    process.env.USER_METADATA_PATH ||
-    path.join(rootDir, "data", "user-metadata.json"),
+  catalogPath: process.env.MODEL_CATALOG_PATH || path.join(dataDir, "model-catalog.json"),
+  userMetadataPath: process.env.USER_METADATA_PATH || path.join(dataDir, "user-metadata.json"),
+  lifecycleStatePath:
+    process.env.MODEL_LIFECYCLE_PATH || path.join(dataDir, "model-lifecycle.json"),
+  lifecycleHistoryPath:
+    process.env.MODEL_HISTORY_PATH || path.join(dataDir, "model-history.json"),
   allowOllamaUpdate: process.env.ALLOW_OLLAMA_UPDATE !== "false",
   ollamaUpdateCommand:
     process.env.OLLAMA_UPDATE_COMMAND ||
@@ -42,7 +47,7 @@ const config: AppConfig = {
   systemProbeTtlMs: Number(process.env.SYSTEM_PROBE_TTL_MS || 30000),
   optimizationConfigPath:
     process.env.OPTIMIZATION_CONFIG_PATH ||
-    path.join(rootDir, "data", "optimization-config.json")
+    path.join(dataDir, "optimization-config.json")
 };
 
 export default config;

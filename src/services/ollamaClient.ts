@@ -1,4 +1,4 @@
-import { ModelSummary } from "../types";
+import { ModelSummary, RunningModelSummary } from "../types";
 
 interface OllamaRequestOptions {
   method: "GET" | "POST" | "DELETE";
@@ -56,6 +56,34 @@ export class OllamaClient {
     return this.#request("/api/pull", {
       method: "POST",
       body: { name, stream: false }
+    });
+  }
+
+  async createModel(name: string, modelfile: string): Promise<Record<string, unknown>> {
+    return this.#request("/api/create", {
+      method: "POST",
+      body: {
+        name,
+        modelfile,
+        stream: false
+      }
+    });
+  }
+
+  async listRunningModels(): Promise<RunningModelSummary[]> {
+    const payload = await this.#request<Record<string, unknown>>("/api/ps", { method: "GET" });
+    const models = Array.isArray(payload.models) ? payload.models : [];
+
+    return models.map((model) => {
+      const normalized = (model ?? {}) as Record<string, unknown>;
+      return {
+        name: String(normalized.name || ""),
+        size: Number(normalized.size || 0),
+        digest: String(normalized.digest || ""),
+        processor: String(normalized.processor || ""),
+        expiresAt: String(normalized.expires_at || normalized.until || ""),
+        details: (normalized.details as Record<string, unknown>) || {}
+      };
     });
   }
 
