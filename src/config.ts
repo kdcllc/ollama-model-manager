@@ -1,11 +1,17 @@
 import path from "path";
-import { resolveDefaultOllamaBaseUrl } from "./services/wslDetect";
+import {
+  OllamaBaseUrlResolutionMethod,
+  resolveDefaultOllamaBaseUrl
+} from "./services/wslDetect";
 
 export interface AppConfig {
   rootDir: string;
   port: number;
   ollamaBaseUrl: string;
   ollamaBaseUrlIsWslOverride: boolean;
+  ollamaBaseUrlResolutionMethod: OllamaBaseUrlResolutionMethod | "env";
+  ollamaBaseUrlResolutionReason?: string;
+  ollamaWslDetected: boolean;
   catalogPath: string;
   userMetadataPath: string;
   lifecycleStatePath: string;
@@ -23,15 +29,29 @@ const dataDir =
   process.env.OLLAMA_MODEL_MANAGER_DATA_DIR ||
   path.join(process.cwd(), "data");
 
-const { url: detectedOllamaBaseUrl, wslOverride } = process.env.OLLAMA_BASE_URL
-  ? { url: process.env.OLLAMA_BASE_URL, wslOverride: false }
-  : resolveDefaultOllamaBaseUrl();
+const preferWindowsHostInWsl =
+  String(process.env.OLLAMA_WSL_USE_WINDOWS_HOST || "").toLowerCase() === "true";
+
+const ollamaResolution = process.env.OLLAMA_BASE_URL
+  ? {
+      url: process.env.OLLAMA_BASE_URL,
+      wslOverride: false,
+      method: "env" as const,
+      reason: undefined,
+      wslDetected: false
+    }
+  : resolveDefaultOllamaBaseUrl({
+      preferWindowsHostInWsl
+    });
 
 const config: AppConfig = {
   rootDir,
   port: Number(process.env.PORT || 3090),
-  ollamaBaseUrl: detectedOllamaBaseUrl,
-  ollamaBaseUrlIsWslOverride: wslOverride,
+  ollamaBaseUrl: ollamaResolution.url,
+  ollamaBaseUrlIsWslOverride: ollamaResolution.wslOverride,
+  ollamaBaseUrlResolutionMethod: ollamaResolution.method,
+  ollamaBaseUrlResolutionReason: ollamaResolution.reason,
+  ollamaWslDetected: ollamaResolution.wslDetected,
   catalogPath: process.env.MODEL_CATALOG_PATH || path.join(dataDir, "model-catalog.json"),
   userMetadataPath: process.env.USER_METADATA_PATH || path.join(dataDir, "user-metadata.json"),
   lifecycleStatePath:

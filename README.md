@@ -376,7 +376,8 @@ The server reads the following environment variables from [src/config.ts](./src/
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `PORT` | `3090` | HTTP port for the UI and API server. |
-| `OLLAMA_BASE_URL` | `http://127.0.0.1:11434` (auto-detected in WSL) | Base URL for the Ollama daemon. |
+| `OLLAMA_BASE_URL` | `http://127.0.0.1:11434` | Explicit base URL for the Ollama daemon. When set, this always takes precedence. |
+| `OLLAMA_WSL_USE_WINDOWS_HOST` | `false` | In WSL, opt in to Windows host IP resolution (`true`) instead of localhost-first mode. |
 | `OLLAMA_MODEL_MANAGER_DATA_DIR` | `./data` | Base directory for runtime data files, resolved from the current working directory. |
 | `MODEL_CATALOG_PATH` | `<data-dir>/model-catalog.json` | Curated baseline catalog metadata file. |
 | `USER_METADATA_PATH` | `<data-dir>/user-metadata.json` | User-edited model notes and overrides. |
@@ -390,6 +391,12 @@ The server reads the following environment variables from [src/config.ts](./src/
 | `OPTIMIZATION_CONFIG_PATH` | `<data-dir>/optimization-config.json` | Persisted optimization preferences and system profile. |
 
 Data files are machine-local runtime state and are created automatically at startup when absent. The catalog file is seeded with bundled defaults so model cards have baseline descriptions immediately.
+
+WSL behavior:
+
+- Default mode is localhost-first (`http://127.0.0.1:11434`) so Ollama running inside WSL works without extra configuration.
+- If Ollama runs on Windows host, set `OLLAMA_WSL_USE_WINDOWS_HOST=true` to try Windows host IP resolution.
+- Invalid/special host candidates like `10.255.255.x` are ignored and fall back to localhost.
 
 Example:
 

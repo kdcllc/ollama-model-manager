@@ -60,6 +60,20 @@ export async function startServer(): Promise<void> {
   app.listen(config.port, () => {
     console.log(`Ollama manager listening on http://localhost:${config.port}`);
     console.log(`Connecting to Ollama at ${config.ollamaBaseUrl}`);
+    if (config.ollamaWslDetected) {
+      console.log(
+        `WSL detected: Ollama URL method=${config.ollamaBaseUrlResolutionMethod}` +
+          (config.ollamaBaseUrlResolutionReason
+            ? ` (${config.ollamaBaseUrlResolutionReason})`
+            : "")
+      );
+    }
+    if (config.ollamaBaseUrlResolutionMethod === "wsl-localhost-default") {
+      console.log(
+        "Using WSL localhost mode by default. " +
+          "Set OLLAMA_WSL_USE_WINDOWS_HOST=true to try Windows host IP resolution."
+      );
+    }
     if (config.ollamaBaseUrlIsWslOverride) {
       console.log(
         "WSL detected: using Windows host IP for Ollama. " +

@@ -1,5 +1,29 @@
 import fs from "fs";
 
+export type OllamaBaseUrlResolutionMethod =
+  | "non-wsl-localhost"
+  | "wsl-localhost-default"
+  | "wsl-windows-host-nameserver"
+  | "wsl-windows-host-gateway"
+  | "wsl-windows-host-fallback-localhost";
+
+export interface OllamaBaseUrlResolution {
+  url: string;
+  wslOverride: boolean;
+  wslDetected: boolean;
+  method: OllamaBaseUrlResolutionMethod;
+  reason?: string;
+}
+
+interface WslWindowsHostCandidate {
+  ip: string;
+  method: "nameserver" | "gateway";
+}
+
+export interface WslResolutionOptions {
+  preferWindowsHostInWsl?: boolean;
+}
+
 /**
  * Checks whether the current process is running inside WSL (Windows Subsystem for Linux).
  * Detection uses the WSL_DISTRO_NAME environment variable (set in all WSL versions)
@@ -32,21 +56,81 @@ export function isRunningInWsl(): boolean {
  *   where localhost already routes transparently to Windows — no override needed).
  * - Neither source can be read.
  */
-export function getWslWindowsHostIp(): string | null {
+export function getWslWindowsHostIp(): WslWindowsHostCandidate | null {
   const nameserverIp = readNameserverIp();
-  if (nameserverIp && !nameserverIp.startsWith("127.")) {
-    return nameserverIp;
+  if (isValidWslWindowsHostIp(nameserverIp)) {
+    return {
+      ip: nameserverIp,
+      method: "nameserver"
+    };
   }
 
   // Nameserver is loopback (systemd-resolved stub or mirrored networking).
   // Try the default gateway from /proc/net/route as a fallback.
   const gatewayIp = readDefaultGatewayIp();
-  if (gatewayIp && !gatewayIp.startsWith("127.")) {
-    return gatewayIp;
+  if (isValidWslWindowsHostIp(gatewayIp)) {
+    return {
+      ip: gatewayIp,
+      method: "gateway"
+    };
   }
 
   // Both sources are loopback — WSL2 mirrored networking; localhost works fine.
   return null;
+}
+
+function isValidWslWindowsHostIp(ip: string | null): ip is string {
+  if (!ip) {
+    return false;
+  }
+
+  if (!isIpv4Address(ip)) {
+    return false;
+  }
+
+  const octets = ip.split(".").map((value) => Number(value));
+  const [first, second, third, fourth] = octets;
+
+  if (first === 0) {
+    return false;
+  }
+
+  if (first === 127) {
+    return false;
+  }
+
+  // Link-local addresses are not useful as a stable Windows host target.
+  if (first === 169 && second === 254) {
+    return false;
+  }
+
+  // Multicast and reserved ranges are never valid Ollama host endpoints.
+  if (first >= 224) {
+    return false;
+  }
+
+  // Observed in WSL route tables when no usable host target exists.
+  if (first === 10 && second === 255 && third === 255) {
+    return false;
+  }
+
+  // Broadcast address.
+  if (first === 255 && second === 255 && third === 255 && fourth === 255) {
+    return false;
+  }
+
+  return true;
+}
+
+function isIpv4Address(value: string): boolean {
+  if (!/^(\d{1,3}\.){3}\d{1,3}$/.test(value)) {
+    return false;
+  }
+
+  return value
+    .split(".")
+    .map((part) => Number(part))
+    .every((part) => Number.isInteger(part) && part >= 0 && part <= 255);
 }
 
 /**
@@ -113,17 +197,49 @@ function hexLeToIp(hex: string): string | null {
  *
  * Returns the resolved URL string and a boolean indicating whether a WSL override was applied.
  */
-export function resolveDefaultOllamaBaseUrl(): { url: string; wslOverride: boolean } {
+export function resolveDefaultOllamaBaseUrl(
+  options: WslResolutionOptions = {}
+): OllamaBaseUrlResolution {
   const fallback = "http://127.0.0.1:11434";
 
   if (!isRunningInWsl()) {
-    return { url: fallback, wslOverride: false };
+    return {
+      url: fallback,
+      wslOverride: false,
+      wslDetected: false,
+      method: "non-wsl-localhost"
+    };
   }
 
-  const windowsHostIp = getWslWindowsHostIp();
-  if (!windowsHostIp) {
-    return { url: fallback, wslOverride: false };
+  if (!options.preferWindowsHostInWsl) {
+    return {
+      url: fallback,
+      wslOverride: false,
+      wslDetected: true,
+      method: "wsl-localhost-default",
+      reason:
+        "WSL localhost mode is enabled by default. Set OLLAMA_WSL_USE_WINDOWS_HOST=true to try Windows host IP resolution."
+    };
   }
 
-  return { url: `http://${windowsHostIp}:11434`, wslOverride: true };
+  const windowsHostCandidate = getWslWindowsHostIp();
+  if (!windowsHostCandidate) {
+    return {
+      url: fallback,
+      wslOverride: false,
+      wslDetected: true,
+      method: "wsl-windows-host-fallback-localhost",
+      reason: "No valid Windows host IP candidate was detected from nameserver or gateway sources."
+    };
+  }
+
+  return {
+    url: `http://${windowsHostCandidate.ip}:11434`,
+    wslOverride: true,
+    wslDetected: true,
+    method:
+      windowsHostCandidate.method === "nameserver"
+        ? "wsl-windows-host-nameserver"
+        : "wsl-windows-host-gateway"
+  };
 }
