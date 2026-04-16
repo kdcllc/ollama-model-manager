@@ -27,7 +27,7 @@ The application runs as a Node.js server, serves a browser UI on port `3090` by 
 
 ## Requirements
 
-- Linux host.
+- Linux host or WSL (Windows Subsystem for Linux).
 - Node.js `>=18.0.0`.
 - Ollama installed and reachable, typically at `http://127.0.0.1:11434`.
 
@@ -239,7 +239,7 @@ The server reads the following environment variables from [src/config.ts](./src/
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `PORT` | `3090` | HTTP port for the UI and API server. |
-| `OLLAMA_BASE_URL` | `http://127.0.0.1:11434` | Base URL for the Ollama daemon. |
+| `OLLAMA_BASE_URL` | `http://127.0.0.1:11434` (auto-detected in WSL) | Base URL for the Ollama daemon. |
 | `MODEL_CATALOG_PATH` | `./data/model-catalog.json` | Curated baseline catalog metadata file. |
 | `USER_METADATA_PATH` | `./data/user-metadata.json` | User-edited model notes and overrides. |
 | `ALLOW_OLLAMA_UPDATE` | `true` | Enables the update endpoint and UI action unless set to `false`. |
@@ -456,6 +456,22 @@ If the UI says Ollama is offline:
     ```
 
 3. If Ollama is bound to a different host or port, set `OLLAMA_BASE_URL` before starting the server.
+
+### WSL (Windows Subsystem for Linux)
+
+When running inside WSL2 with Ollama installed on the **Windows host**, the app automatically detects the Windows host IP from `/etc/resolv.conf` and uses it as the Ollama base URL. A log message confirms this at startup:
+
+```text
+WSL detected: using Windows host IP for Ollama. Override with OLLAMA_BASE_URL=http://127.0.0.1:11434 if Ollama runs inside WSL.
+```
+
+If Ollama is installed **inside WSL** (not on the Windows host), override the auto-detection:
+
+```bash
+OLLAMA_BASE_URL=http://127.0.0.1:11434 npm start
+```
+
+If you are using WSL2 with **mirrored networking** (Windows 11, `.wslconfig` `networkingMode=mirrored`), `localhost` already works transparently and no override is needed — the app detects this case and uses `127.0.0.1` as normal.
 
 If `npm start` exits immediately, rebuild first so `dist/src/server.js` exists:
 

@@ -1,9 +1,11 @@
 import path from "path";
+import { resolveDefaultOllamaBaseUrl } from "./services/wslDetect";
 
 export interface AppConfig {
   rootDir: string;
   port: number;
   ollamaBaseUrl: string;
+  ollamaBaseUrlIsWslOverride: boolean;
   catalogPath: string;
   userMetadataPath: string;
   allowOllamaUpdate: boolean;
@@ -16,10 +18,15 @@ export interface AppConfig {
 
 const rootDir = path.resolve(__dirname, "..");
 
+const { url: detectedOllamaBaseUrl, wslOverride } = process.env.OLLAMA_BASE_URL
+  ? { url: process.env.OLLAMA_BASE_URL, wslOverride: false }
+  : resolveDefaultOllamaBaseUrl();
+
 const config: AppConfig = {
   rootDir,
   port: Number(process.env.PORT || 3090),
-  ollamaBaseUrl: process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434",
+  ollamaBaseUrl: detectedOllamaBaseUrl,
+  ollamaBaseUrlIsWslOverride: wslOverride,
   catalogPath:
     process.env.MODEL_CATALOG_PATH ||
     path.join(rootDir, "data", "model-catalog.json"),
