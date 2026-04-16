@@ -59,6 +59,13 @@ export async function startServer(): Promise<void> {
 
   app.listen(config.port, () => {
     console.log(`Ollama manager listening on http://localhost:${config.port}`);
+    console.log(`Connecting to Ollama at ${config.ollamaBaseUrl}`);
+    if (config.ollamaBaseUrlIsWslOverride) {
+      console.log(
+        "WSL detected: using Windows host IP for Ollama. " +
+          "Override with OLLAMA_BASE_URL=http://127.0.0.1:11434 if Ollama runs inside WSL."
+      );
+    }
   });
 }
 
