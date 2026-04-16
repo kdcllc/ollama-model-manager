@@ -15,10 +15,21 @@ CLI and web UI for managing local Ollama models with hardware-aware recommendati
 
 The application runs as a Node.js server, serves a browser UI on port `3090` by default, talks to the local Ollama daemon at `http://127.0.0.1:11434` by default, and can also be launched directly with `npx`.
 
+## Original Article
+
+This project implements and extends the lifecycle workflow described in the OneUptime article:
+
+- <https://oneuptime.com/blog/post/2026-02-02-ollama-model-management/view#model-lifecycle-workflow>
+
 ## Features
 
 - List installed Ollama models with merged catalog and user metadata.
 - Pull, inspect, enrich, annotate, and delete models from one interface.
+- Create custom models from Modelfile content through the API and web UI.
+- Track per-model lifecycle state (unknown, pulling, building, ready, failed, deleting).
+- Record lifecycle activity history for pull, delete, metadata updates, and enrichment actions.
+- Execute batch pull operations through the API with per-model results.
+- View currently running models via Ollama process status integration.
 - Detect CUDA availability and switch recommendation profiles between GPU and CPU-only systems.
 - Surface adaptive KV cache and Flash Attention guidance based on installed model sizes.
 - Persist optimization preferences and user notes in local JSON data files.
@@ -65,6 +76,131 @@ http://localhost:3090
 ```
 
 The CLI entry point in [bin/ollama-model-manager](./bin/ollama-model-manager) starts the compiled server from `dist/src/server.js`.
+
+## How to Use
+
+After starting the app, open <http://localhost:3090> and use this flow.
+
+1. Check health and recommendations.
+2. Pull a model from the Install or Update panel.
+3. Open model details and review family, parameter size, quantization, and capabilities.
+4. Use Enrich to auto-populate metadata from the Ollama Library page.
+5. Save your own notes (best-for, not-ideal-for, and tips).
+6. Update a model by pulling it again.
+7. Delete models you no longer need.
+8. Review lifecycle activity through the history endpoints if you want an API-level audit trail.
+
+Create a custom model from the dashboard:
+
+1. Go to the Create Custom Model panel.
+2. Enter a target model name, for example `my-team/coding-assistant`.
+3. Paste a Modelfile body using directives like `FROM`, `SYSTEM`, and `PARAMETER`.
+4. Submit Create Model and wait for build completion.
+5. Open details for the new model and continue with metadata enrichment/notes.
+
+Minimal Modelfile example:
+
+```text
+FROM llama3.2:3b-instruct-q4_K_M
+SYSTEM "You are a precise coding assistant."
+PARAMETER temperature 0.2
+```
+
+### Custom Model Guide
+
+Use this checklist when creating a new model so builds are predictable and easier to debug.
+
+1. Start with a base model you already have installed, or pull it first.
+2. Keep your first Modelfile minimal and add one change at a time.
+3. Use a stable output style in `SYSTEM` (format, tone, and constraints).
+4. Tune one parameter per iteration (for example, only `temperature` first).
+5. Build, test with 3 to 5 prompts, then adjust.
+
+Recommended naming pattern:
+
+- `team-or-project/purpose`
+- examples: `dev/coder`, `support/triage-assistant`, `analytics/sql-helper`
+
+#### Common Modelfile Directives
+
+- `FROM`: base model/tag to build from.
+- `SYSTEM`: system instruction that defines behavior and style.
+- `PARAMETER temperature`: creativity level. Lower is more deterministic.
+- `PARAMETER top_p`: sampling control for output diversity.
+- `PARAMETER num_ctx`: context window size.
+- `PARAMETER stop`: one or more stop sequences.
+
+#### Starter Templates
+
+Coding assistant:
+
+```text
+FROM qwen2.5-coder:14b
+SYSTEM "You are a senior software engineer. Give concise, production-safe answers with clear tradeoffs."
+PARAMETER temperature 0.2
+PARAMETER top_p 0.9
+PARAMETER num_ctx 8192
+```
+
+Documentation writer:
+
+```text
+FROM llama3.2:3b-instruct-q4_K_M
+SYSTEM "You write accurate technical documentation with short sections and practical examples."
+PARAMETER temperature 0.4
+PARAMETER top_p 0.95
+PARAMETER num_ctx 8192
+```
+
+Strict JSON responder:
+
+```text
+FROM mistral:latest
+SYSTEM "Return valid JSON only. Never include markdown code fences."
+PARAMETER temperature 0.1
+PARAMETER stop "```"
+```
+
+#### API Workflow for Create
+
+Create from inline Modelfile:
+
+```bash
+curl -sS -X POST http://localhost:3090/api/models/create \
+   -H "Content-Type: application/json" \
+   -d '{
+      "name":"dev/coder",
+      "modelfile":"FROM qwen2.5-coder:14b\nSYSTEM \"You are a senior software engineer.\"\nPARAMETER temperature 0.2"
+   }'
+```
+
+Then inspect and validate:
+
+```bash
+curl -sS http://localhost:3090/api/models/dev%2Fcoder
+curl -sS "http://localhost:3090/api/models/dev%2Fcoder/history?limit=20"
+```
+
+#### Troubleshooting Custom Builds
+
+- Error: base model not found
+- Fix: pull the exact base tag in `FROM` first.
+
+- Error: build succeeds but output quality is poor
+- Fix: lower `temperature`, tighten `SYSTEM`, and add explicit output constraints.
+
+- Error: context-related truncation
+- Fix: increase `PARAMETER num_ctx` and test with shorter prompts first.
+
+- Error: model is too slow on CPU
+- Fix: use a smaller or more quantized base model tag.
+
+#### Safe Iteration Pattern
+
+1. Duplicate your current model under a new name.
+2. Change one directive.
+3. Rebuild and compare with the same prompt set.
+4. Keep a short changelog in model notes.
 
 ## TypeScript Workflow
 
@@ -244,6 +380,8 @@ The server reads the following environment variables from [src/config.ts](./src/
 | `OLLAMA_MODEL_MANAGER_DATA_DIR` | `./data` | Base directory for runtime data files, resolved from the current working directory. |
 | `MODEL_CATALOG_PATH` | `<data-dir>/model-catalog.json` | Curated baseline catalog metadata file. |
 | `USER_METADATA_PATH` | `<data-dir>/user-metadata.json` | User-edited model notes and overrides. |
+| `MODEL_LIFECYCLE_PATH` | `<data-dir>/model-lifecycle.json` | Persisted lifecycle state for each model. |
+| `MODEL_HISTORY_PATH` | `<data-dir>/model-history.json` | Persisted lifecycle activity and audit-style events. |
 | `ALLOW_OLLAMA_UPDATE` | `true` | Enables the update endpoint and UI action unless set to `false`. |
 | `OLLAMA_UPDATE_COMMAND` | `curl -fsSL https://ollama.com/install.sh \| sh` | Command executed by the update endpoint. |
 | `OLLAMA_UPDATE_TIMEOUT_MS` | `600000` | Timeout for the update command in milliseconds. |
@@ -273,7 +411,11 @@ Model names used in route parameters should be URL-encoded. For example, `qwen2.
 
 - `GET /api/models`
 - `GET /api/models/:name`
+- `GET /api/models/:name/history`
+- `GET /api/models/history/all`
 - `POST /api/models/pull`
+- `POST /api/models/create`
+- `POST /api/models/batch-pull`
 - `DELETE /api/models/:name`
 - `PATCH /api/models/:name/notes`
 - `POST /api/models/:name/enrich`
@@ -296,6 +438,25 @@ Pull a model:
 curl -sS -X POST http://localhost:3090/api/models/pull \
    -H "Content-Type: application/json" \
    -d '{"name":"qwen2.5-coder:14b"}'
+```
+
+Create a custom model from Modelfile content:
+
+```bash
+curl -sS -X POST http://localhost:3090/api/models/create \
+   -H "Content-Type: application/json" \
+   -d '{
+      "name":"my-team/coding-assistant",
+      "modelfile":"FROM llama3.2:3b-instruct-q4_K_M\nSYSTEM \"You are a precise coding assistant.\"\nPARAMETER temperature 0.2"
+   }'
+```
+
+Batch pull models:
+
+```bash
+curl -sS -X POST http://localhost:3090/api/models/batch-pull \
+   -H "Content-Type: application/json" \
+   -d '{"names":["qwen2.5-coder:14b","mistral:latest"]}'
 ```
 
 Save notes for a model:
@@ -326,11 +487,25 @@ Delete a model:
 curl -sS -X DELETE http://localhost:3090/api/models/qwen2.5-coder%3A14b
 ```
 
+Get lifecycle history for a model:
+
+```bash
+curl -sS "http://localhost:3090/api/models/qwen2.5-coder%3A14b/history?limit=50"
+```
+
+Get global lifecycle activity:
+
+```bash
+curl -sS "http://localhost:3090/api/models/history/all?limit=100"
+```
+
 ### System Endpoints
 
 - `GET /api/system/health`
 - `GET /api/system/recommendations`
 - `GET /api/system/gpu-status`
+- `GET /api/system/running-models`
+- `GET /api/system/lifecycle-activity`
 - `GET /api/system/optimization-config`
 - `PATCH /api/system/optimization-config`
 - `POST /api/system/update-ollama`
@@ -346,6 +521,18 @@ Get recommendations:
 
 ```bash
 curl -sS http://localhost:3090/api/system/recommendations
+```
+
+Get running models currently loaded in Ollama:
+
+```bash
+curl -sS http://localhost:3090/api/system/running-models
+```
+
+Get lifecycle activity from the system API:
+
+```bash
+curl -sS "http://localhost:3090/api/system/lifecycle-activity?limit=100"
 ```
 
 Update optimization preferences:
@@ -421,6 +608,10 @@ Current behavior:
 - `data/model-catalog.json` stores curated baseline model descriptions and use cases.
 - `data/user-metadata.json` stores user notes, overrides, and fetched library metadata.
 - `data/optimization-config.json` stores user optimization preferences and the latest observed system profile.
+- `data/model-lifecycle.json` stores lifecycle state per model (for example pull or delete outcomes).
+- `data/model-history.json` stores activity history entries for lifecycle and metadata operations.
+
+Lifecycle state and history files are created automatically at startup if they are missing.
 
 ## Project Structure
 

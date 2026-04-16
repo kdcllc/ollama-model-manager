@@ -84,6 +84,28 @@
       </section>
 
       <section class="panel">
+        <h2>Create Custom Model</h2>
+        <form id="createForm" class="stack-form">
+          <input
+            id="createName"
+            type="text"
+            placeholder="Example: my-team/coding-assistant"
+            required
+          />
+          <textarea
+            id="createModelfile"
+            rows="6"
+            placeholder="FROM llama3.2:3b-instruct-q4_K_M\nSYSTEM \"You are a precise coding assistant.\"\nPARAMETER temperature 0.2"
+            required
+          ></textarea>
+          <div class="actions-row">
+            <button type="submit" class="btn btn-primary">Create Model</button>
+          </div>
+        </form>
+        <p class="hint">Use standard Ollama Modelfile directives such as FROM, SYSTEM, and PARAMETER.</p>
+      </section>
+
+      <section class="panel">
         <h2>Installed Models</h2>
         <div class="models-toolbar">
           <div class="models-toolbar-main">

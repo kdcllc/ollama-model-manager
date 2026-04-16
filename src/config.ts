@@ -6,6 +6,8 @@ export interface AppConfig {
   ollamaBaseUrl: string;
   catalogPath: string;
   userMetadataPath: string;
+  lifecycleStatePath: string;
+  lifecycleHistoryPath: string;
   allowOllamaUpdate: boolean;
   ollamaUpdateCommand: string;
   updateTimeoutMs: number;
@@ -25,6 +27,10 @@ const config: AppConfig = {
   ollamaBaseUrl: process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434",
   catalogPath: process.env.MODEL_CATALOG_PATH || path.join(dataDir, "model-catalog.json"),
   userMetadataPath: process.env.USER_METADATA_PATH || path.join(dataDir, "user-metadata.json"),
+  lifecycleStatePath:
+    process.env.MODEL_LIFECYCLE_PATH || path.join(dataDir, "model-lifecycle.json"),
+  lifecycleHistoryPath:
+    process.env.MODEL_HISTORY_PATH || path.join(dataDir, "model-history.json"),
   allowOllamaUpdate: process.env.ALLOW_OLLAMA_UPDATE !== "false",
   ollamaUpdateCommand:
     process.env.OLLAMA_UPDATE_COMMAND ||
