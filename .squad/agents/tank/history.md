@@ -22,6 +22,20 @@ Status: ✅ Configuration complete. Playwright tooling now available for future 
 
 ---
 
+## 2026-04-19: MCP Config Revision Required
+
+**Scribe Checkpoint**: Morpheus completed review of Playwright MCP configuration.
+
+Feedback received:
+1. **Pattern Issue**: Missing `-y` flag in `npx @playwright/mcp@latest` command
+2. **Existing Pattern**: GitHub MCP entry includes `-y`: `npx -y @github/copilot-cli --stdio-manager=true`
+3. **Requirement**: Revise Playwright entry to include `-y` flag for non-interactive operation
+4. **Target**: `npx -y @playwright/mcp@latest` for consistency with established pattern
+
+Decision recorded in decisions.md (#3). Awaiting revision.
+
+---
+
 ## 2026-04-19: Copilot Instructions Analysis
 
 Analyzed repository for build, test, lint, typecheck, dev, start, and packaging commands to inform `.github/copilot-instructions.md`.

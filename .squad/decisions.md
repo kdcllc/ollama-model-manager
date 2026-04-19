@@ -2,6 +2,25 @@
 
 ## Active Decisions
 
+### 3. MCP Config Review Follow-Up — Non-Interactive npx Flag (2026-04-19)
+
+**Status:** Proposed  
+**Owner:** Morpheus (Lead)  
+**Timestamp:** 2026-04-19T00:00:00Z  
+
+**Decision:** For repo-managed MCP servers launched through `npx`, include `-y` in the argument list.
+
+**Rationale:** This repository records MCP config as a shared team artifact for future Copilot sessions. Those sessions are often non-interactive, so omitting `-y` can leave `npx` waiting for install confirmation and make the configured server unusable.
+
+**Evidence:**
+- `.copilot/mcp-config.json` keeps the example GitHub server on the `npx` + `-y` pattern
+- The newly added `playwright` entry uses `npx` without `-y`, creating inconsistent behavior and a likely startup failure mode
+
+**Follow-On Action:**
+Tank to revise the MCP config entry so the Playwright server follows the same non-interactive launch pattern.
+
+---
+
 ### 2. Add Playwright MCP Server to Repository Configuration (2026-04-19)
 
 **Status:** Adopted  

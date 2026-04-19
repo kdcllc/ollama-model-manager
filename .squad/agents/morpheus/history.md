@@ -17,6 +17,7 @@
 - Lifecycle history is append-only audit log; never mutate history entries.
 - Model names in URLs must be URL-encoded (colons become `%3A`).
 - All configuration is environment-variable driven; no config files.
+- Repo-level MCP config should treat `npx`-launched servers as non-interactive: include `-y` in args so future sessions do not block on package install prompts. Relevant file: `.copilot/mcp-config.json`.
 
 ## 2026-04-19: Squad Orchestration Complete
 
@@ -29,3 +30,15 @@ Work completed:
 4. Received approval from Switch (Round 2)
 
 Status: ✅ Delivery complete. File approved and ready for future Copilot sessions.
+
+## 2026-04-19: MCP Config Review and Feedback
+
+**Scribe Checkpoint**: Morpheus reviewed Tank's Playwright MCP configuration entry and identified a non-interactive pattern violation.
+
+Review outcome:
+1. **Issue Found**: Playwright entry uses `npx @playwright/mcp@latest` without `-y` flag
+2. **Pattern Violation**: GitHub MCP example includes `-y` for non-interactive operation in future Copilot sessions
+3. **Decision**: Tank to revise config entry to include `-y` flag for consistency and reliability
+4. **Impact**: Ensures all repo-managed MCP servers follow non-interactive launch pattern (decision #3 merged to decisions.md)
+
+Status: Pending Tank's revision.
