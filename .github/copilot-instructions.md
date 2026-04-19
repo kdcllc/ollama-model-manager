@@ -62,48 +62,91 @@ This project does **not** have lint, test, or single-test commands. Focus on:
 
 ---
 
-## Architecture and Code Patterns
+## Architecture Overview
 
-### Server and Routing (`src/server.ts`)
+The system follows a **request–service–store** pattern from browser to Ollama daemon. Understanding this flow is essential for adding features, debugging, or reasoning about state changes.
 
-Express server exports `startServer()` (called by `bin/ollama-model-manager`). The server:
-- Serves `dist/public/index.html` and `dist/public/styles.css` as static assets
-- Mounts route handlers from `src/routes/models.ts` and `src/routes/system.ts`
-- Auto-creates data files on first run via `src/services/*Store.ts` modules
+### 1. Server Startup and Initialization (`src/server.ts`)
 
-### Data Persistence Layer
+When `startServer()` is called:
 
-Five JSON data stores, all in `data/` (or custom `OLLAMA_MODEL_MANAGER_DATA_DIR`):
+1. **Express app is created** with JSON body parser (1MB limit)
+2. **Service instances are created:**
+   - `OllamaClient` → wraps HTTP calls to Ollama daemon
+   - `MetadataStore` → manages user notes and enriched model metadata (two JSON files)
+   - `ModelLifecycleStore` → tracks per-model state and append-only history (two JSON files)
+   - `OptimizationStore` → stores user preferences (one JSON file)
+   - `SystemProbe` → detects GPU/CUDA, runs nvidia-smi, caches results
+3. **All stores are initialized** (`await store.init()`), auto-creating JSON files if missing
+4. **Route handlers are mounted:**
+   - `/api/models` → `createModelsRouter()` receives all services
+   - `/api/system` → `createSystemRouter()` receives all services
+5. **Static file serving** is configured for `dist/public/` (compiled UI)
+6. **Fallback route** catches all paths and serves `index.html` (SPA routing)
+7. **Server listens** on configured port; startup logs show Ollama URL, WSL detection method
 
-1. **model-catalog.json** — Baseline model metadata (bundled defaults, user-editable)
-2. **user-metadata.json** — User notes, overrides, enriched library data
-3. **model-lifecycle.json** — Per-model state (unknown, pulling, building, ready, failed, deleting)
-4. **model-history.json** — Append-only audit log of lifecycle and metadata operations
-5. **optimization-config.json** — User optimization preferences and system profile
+**Key insight:** Services are instantiated once at startup and passed as dependencies to route handlers. This ensures consistent state management and simplifies testing.
 
-All are created automatically if missing. Access via store modules:
-- `src/services/metadataStore.ts` — User notes + enriched metadata
-- `src/services/modelLifecycleStore.ts` — Lifecycle state (model-lifecycle.json) and history (model-history.json); both accessed separately
-- `src/services/optimizationStore.ts` — Optimization preferences
+### 2. Data Persistence Layer (Five JSON Stores)
 
-### Routes and API Contract
+All stores are in `data/` (or custom `OLLAMA_MODEL_MANAGER_DATA_DIR`). Each has a backing store module:
 
-**Models routes** (`src/routes/models.ts`):
-- `GET /api/models` — List all models
-- `GET /api/models/:name` — Get model details
+| Store | File | Managed By | Access Pattern |
+|-------|------|-----------|-----------------|
+| **Baseline catalog** | `model-catalog.json` | MetadataStore | Read defaults, user-editable |
+| **User metadata** | `user-metadata.json` | MetadataStore | Read/write user notes, enriched descriptions |
+| **Lifecycle state** | `model-lifecycle.json` | ModelLifecycleStore | Read/write per-model state (ready, pulling, failed, etc.) |
+| **Lifecycle history** | `model-history.json` | ModelLifecycleStore | Append-only audit log of state changes and metadata updates |
+| **Optimization prefs** | `optimization-config.json` | OptimizationStore | Read/write GPU settings, cache modes, batch sizes |
+
+**Store initialization flow:**
+- Each store module exports an `init()` method that auto-creates JSON if missing
+- Catalog is seeded with bundled defaults (so users see model descriptions immediately)
+- Other stores are created empty on first run
+- History is never mutated—only appended—to preserve audit trail
+
+**Store access pattern:** Route handlers do not directly read/write JSON. Instead, they call typed methods on store instances (e.g., `metadataStore.getUserMetadata(modelName)`). This centralizes validation and file I/O.
+
+### 3. Request Flow: Browser → Route → Service → Store → Ollama
+
+Example: **User pulls a model** (`POST /api/models/pull`):
+
+1. **Browser** (`public/app.ts`) sends `fetch('/api/models/pull', { body: { name: 'llama2' } })`
+2. **Route handler** (`src/routes/models.ts`) receives request:
+   - Validates model name (decodes URI component, trims)
+   - Calls `ollamaClient.pullModel(name)` to initiate pull
+   - Calls `lifecycleStore.setState(name, 'pulling')` to record state
+   - Returns immediately with `{ ok: true, state: 'pulling' }` (async pull happens in background)
+3. **Service** (`OllamaClient.pullModel()`) makes HTTP request to Ollama daemon (`/api/pull`)
+4. **Daemon** pulls model; status updates are streamed back
+5. **Browser UI polls** `/api/models/:name` and `/api/system/lifecycle-activity` to detect state changes
+6. **Route handler** merges Ollama models with lifecycle state and metadata:
+   ```
+   models[] (from Ollama) + lifecycle state + user notes → enriched model detail
+   ```
+
+**Lifecycle states:** `unknown | queued | pulling | building | ready | failed | deleting`. State is explicit and tracked per model.
+
+### 4. Route Handlers and API Contract
+
+Routes are organized into two files and created by factory functions that receive service dependencies:
+
+**Models routes** (`src/routes/models.ts`) — `createModelsRouter(deps)`:
+- `GET /api/models` — List all models (merged Ollama + metadata + lifecycle + capabilities)
+- `GET /api/models/:name` — Get single model detail
 - `GET /api/models/:name/history` — Lifecycle history for one model
 - `GET /api/models/history/all` — Global lifecycle activity
-- `POST /api/models/pull` — Pull a model from Ollama library
-- `POST /api/models/create` — Create a custom model from Modelfile content
+- `POST /api/models/pull` — Pull model from Ollama library
+- `POST /api/models/create` — Create custom model from Modelfile
 - `POST /api/models/batch-pull` — Pull multiple models
-- `DELETE /api/models/:name` — Delete a model
+- `DELETE /api/models/:name` — Delete model
 - `PATCH /api/models/:name/notes` — Save user notes and metadata
-- `POST /api/models/:name/enrich` — Fetch metadata from Ollama library page
+- `POST /api/models/:name/enrich` — Fetch metadata from Ollama library
 
-**System routes** (`src/routes/system.ts`):
+**System routes** (`src/routes/system.ts`) — `createSystemRouter(deps)`:
 - `GET /api/system/health` — Ollama daemon health check
-- `GET /api/system/recommendations` — Hardware recommendations (GPU/CPU detection)
-- `GET /api/system/gpu-status` — nvidia-smi output if available
+- `GET /api/system/recommendations` — Hardware recommendations (GPU/CPU detected)
+- `GET /api/system/gpu-status` — nvidia-smi output (if available)
 - `GET /api/system/running-models` — Models currently loaded in Ollama
 - `GET /api/system/lifecycle-activity` — Paginated global activity history
 - `GET /api/system/optimization-config` — Current optimization preferences
@@ -111,33 +154,74 @@ All are created automatically if missing. Access via store modules:
 - `POST /api/system/update-ollama` — Execute Ollama update command
 - `POST /api/system/fetch-library` — Fetch metadata from library URL
 
-Model names in URLs should be URL-encoded (e.g., `qwen2.5-coder:14b` → `qwen2.5-coder%3A14b`).
+**Model names in URLs:** Always URL-encode (e.g., `qwen2.5-coder:14b` → `qwen2.5-coder%3A14b`). Routes decode on entry: `decodeURIComponent(req.params.name)`.
 
-### Ollama Integration (`src/services/ollamaClient.ts`)
+**Error handling:** All errors return HTTP status (400, 404, 500, 503) with JSON body `{ error: string }`. 503 is returned if Ollama is unreachable.
 
-Wraps HTTP calls to Ollama daemon. Key methods:
-- `listModels()` — Fetch installed models
-- `pullModel(name)` — Stream-pull a model
-- `createModel(name, modelfile)` — Build custom model
-- `deleteModel(name)` — Delete model
-- `getModelInfo(name)` — Get model details
-- Base URL resolution respects `OLLAMA_BASE_URL` env var or WSL auto-detection
+### 5. Core Services
 
-### System Probing (`src/services/systemProbe.ts`)
+**OllamaClient** (`src/services/ollamaClient.ts`)
+- Wraps HTTP calls to Ollama daemon
+- Resolves base URL from env var or WSL auto-detection
+- Methods: `listModels()`, `pullModel(name)`, `createModel(name, modelfile)`, `deleteModel(name)`, `getModelInfo(name)`
+- All methods are async
 
-Detects CUDA, runs `nvidia-smi`, probes model counts. Results cached for `SYSTEM_PROBE_TTL_MS`. Used by recommendations engine to guide users toward GPU or CPU optimization patterns.
+**MetadataStore** (`src/services/metadataStore.ts`)
+- Manages two files: catalog (defaults) + user metadata (notes, enriched data)
+- Methods: `getUserMetadata(modelName)`, `setUserMetadata(modelName, data)`, `mergeModels(ollamaModels)` (combines Ollama data with stored metadata)
+- Provides normalized model names via `canonicalName(name)`
 
-### WSL Detection (`src/services/wslDetect.ts`)
+**ModelLifecycleStore** (`src/services/modelLifecycleStore.ts`)
+- Manages two files: lifecycle state + history (append-only)
+- Methods: `setState(modelName, state)`, `recordEvent(modelName, event)`, `attachLifecycle(models)`, `getHistory(modelName, limit)`
+- History entries include timestamp, state, and error details
 
-In WSL environments, auto-resolves Windows host IP from `/etc/resolv.conf` unless overridden via `OLLAMA_BASE_URL` or `OLLAMA_WSL_USE_WINDOWS_HOST=true`. Logs resolution method at startup so users can debug connectivity issues.
+**SystemProbe** (`src/services/systemProbe.ts`)
+- Detects GPU (CUDA), runs `nvidia-smi`, probes model count
+- Results cached for `SYSTEM_PROBE_TTL_MS` (default: 30s)
+- Methods: `getCapabilities()` → returns `{ hasGPU, maxModels, gpuInfo, ... }`
+- Used by recommendations to guide users toward GPU or CPU optimization
 
-### Browser UI (`public/app.ts`)
+**OptimizationStore** (`src/services/optimizationStore.ts`)
+- Stores user preferences (KV-cache mode, flash attention, batch size)
+- Methods: `getConfig()`, `setConfig(updates)`
 
-Vanilla DOM manipulation (no framework). Fetches from API, updates UI state, handles form submissions. Compiled as `dist/public/app.js` and loaded by `index.html`. Polls `/api/system/health` and model endpoints to refresh UI.
+**Additional services:**
+- **WSL Detection** (`src/services/wslDetect.ts`) → Auto-resolves Windows host IP from `/etc/resolv.conf`
+- **Library Fetcher** (`src/services/libraryFetcher.ts`) → Fetches model metadata from Ollama library
+- **Command Runner** (`src/services/commandRunner.ts`) → Executes Ollama update command with timeout
 
-### Types (`src/types.ts`)
+### 6. Browser UI (`public/app.ts`)
 
-Central TypeScript interface definitions for models, lifecycle state, recommendations, and API payloads. All route handlers and services reference these types.
+Vanilla DOM API (no framework). Entry point is `init()`:
+
+1. **Wire event listeners** on buttons, forms, filters
+2. **Load optimization config** from `/api/system/optimization-config`
+3. **Call `refreshAll()`** which:
+   - Fetches `/api/models` (merged list with metadata, lifecycle, capabilities)
+   - Fetches `/api/system/health` (connection status)
+   - Fetches `/api/system/recommendations` (GPU suggestions)
+   - Fetches `/api/system/gpu-status` (nvidia-smi, if available)
+   - Renders models in grid or list view
+   - Updates health badge and setup guidance
+
+**State management:** Global `state` object holds models, UI preferences (sort, filter, view mode), and live GPU polling flag. Functions update this object and re-render affected UI sections.
+
+**Polling:** UI polls `/api/system/health` every 5s to detect Ollama availability. When a model is pulling or building, polls `/api/models/:name` every 2s to detect state changes.
+
+**Form submission flow:** Pull/Create forms call API, then immediately poll for lifecycle updates so progress is visible.
+
+### 7. Type Definitions (`src/types.ts`)
+
+Central TypeScript interfaces:
+
+- **ModelSummary** — Model name, size, digest, details, metadata, lifecycle state, suggestion tier
+- **ModelMetadata** — Description, notes, bestFor, notIdealFor, extraTips, library URL, fetched metadata
+- **ModelLifecycleState** — `unknown | queued | pulling | building | ready | failed | deleting`
+- **ModelLifecycleRecord** — State, error, progress (for pull/build), timestamps
+- **SystemCapabilities** — GPU info, max models, CUDA version, recommendations
+
+All route handlers and services type their inputs/outputs using these interfaces.
 
 ---
 
