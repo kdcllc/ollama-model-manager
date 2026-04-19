@@ -57,7 +57,7 @@ window.openSudoPasswordDialog = function openSudoPasswordDialog() {
       fallbackDialog.appendChild(fallbackForm);
       document.body.appendChild(fallbackDialog);
 
-      const cleanupFallback = (value) => {
+      const cleanupFallback = (value: string | null) => {
         fallbackDialog.remove();
         resolve(value);
       };
