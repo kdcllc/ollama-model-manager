@@ -2,6 +2,37 @@
 
 ## Active Decisions
 
+### 7. UX Implementation Complete: Trinity Fixes + Switch Re-Approval (2026-04-19)
+
+**Status:** Approved  
+**Reviewers:** Trinity (Designer), Switch (Tester)  
+**Timestamp:** 2026-04-19T19:41:22Z
+
+**Summary:** Trinity implemented all five blocking accessibility and hierarchy fixes from Decision #6 in the live app. Switch re-reviewed and returned **APPROVE WITH FOLLOW-UP** verdict. All Decision #6 blockers resolved in production.
+
+**Implementation:**
+1. **Hierarchy Re-ranking** — Moved Installed Models + Model Details sections earlier in page flow (after hero/forms, before System Profile)
+2. **Explicit Labeling** — Added `<label>` elements for Pull Name, Create Name, Create Modelfile, Model Search, KV Cache Mode, Flash Attention Mode
+3. **Focus-Visible Styling** — Implemented `:focus-visible` CSS rules for all interactive elements using project accent color (#29b6f6)
+4. **Focus Management** — Details panel open moves focus to `#detailsHeading`; keyboard activation (Enter/Space) on model card actions
+5. **Return-Path Logic** — Focus restoration after close/delete; fallback to search if trigger element removed from DOM
+
+**Validation:**
+- npm run typecheck: Pass
+- npm run build: Pass
+- Playwright sanity checks: Pass
+- Live app verification (http://127.0.0.1:3090): Pass
+- Accessibility scan (WCAG 2.1 Level A): Zero violations
+
+**Follow-Up (Minor, Non-Blocking):** After model deletion, focus falls back to search input when original trigger disappears. Acceptable for v1; future refinement could prefer next surviving model action for tighter workflow continuity.
+
+**Artifacts:**
+- Orchestration logs: `.squad/orchestration-log/2026-04-19T19:41:22Z-{trinity,switch}.md`
+- Session log: `.squad/log/2026-04-19T19:41:22Z-ux-implementation.md`
+- Changes: `public/{index.html, styles.css, app.ts}`
+
+---
+
 ### 6. Live UX Review: Trinity + Switch Joint Findings (2026-04-19)
 
 **Status:** DECISION GATE — Approval Blocked  
