@@ -40,9 +40,8 @@ export function runCommandWithSudoPassword(
   timeoutMs: number
 ): Promise<CommandResult> {
   return new Promise((resolve) => {
-    // Wrap the command so sudo reads password from stdin (-S) and ignores cached credentials (-k)
-    const safeCommand = command.replace(/'/g, "'\\''");
-    const child = spawn("sudo", ["-S", "-k", "-p", "", "sh", "-c", safeCommand], {
+    // sudo reads the password from stdin (-S) and ignores cached credentials (-k).
+    const child = spawn("sudo", ["-S", "-k", "-p", "", "sh", "-c", command], {
       stdio: ["pipe", "pipe", "pipe"]
     });
 

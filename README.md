@@ -661,16 +661,12 @@ If the UI says Ollama is offline:
 
 ### WSL (Windows Subsystem for Linux)
 
-When running inside WSL2 with Ollama installed on the **Windows host**, the app automatically detects the Windows host IP from `/etc/resolv.conf` and uses it as the Ollama base URL. A log message confirms this at startup:
+When running inside WSL2 with Ollama installed on the **Windows host**, the app defaults to using `localhost` (`127.0.0.1`). To enable automatic Windows host IP resolution, set the `OLLAMA_WSL_USE_WINDOWS_HOST=true` environment variable before starting the server. When enabled, the app resolves the Windows host IP from `/etc/resolv.conf` or the default gateway and uses it as the Ollama base URL. A log message confirms the resolution method at startup.
 
-```text
-WSL detected: using Windows host IP for Ollama. Override with OLLAMA_BASE_URL=http://127.0.0.1:11434 if Ollama runs inside WSL.
-```
-
-If Ollama is installed **inside WSL** (not on the Windows host), override the auto-detection:
+To opt in to Windows host IP auto-detection:
 
 ```bash
-OLLAMA_BASE_URL=http://127.0.0.1:11434 npm start
+OLLAMA_WSL_USE_WINDOWS_HOST=true npm start
 ```
 
 If you are using WSL2 with **mirrored networking** (Windows 11, `.wslconfig` `networkingMode=mirrored`), `localhost` already works transparently and no override is needed — the app detects this case and uses `127.0.0.1` as normal.

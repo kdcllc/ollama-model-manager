@@ -7,8 +7,76 @@ window.openSudoPasswordDialog = function openSudoPasswordDialog() {
     const rootNode = document.getElementById("sudoModalRoot");
 
     if (!react || !reactDOM || !rootNode) {
-      const fallback = prompt("Enter sudo password to update Ollama runtime:", "");
-      resolve(fallback === null ? null : String(fallback));
+      const fallbackDialog = document.createElement("dialog");
+      fallbackDialog.className = "sudo-modal";
+      fallbackDialog.open = true;
+
+      const fallbackForm = document.createElement("form");
+      fallbackForm.method = "dialog";
+
+      const heading = document.createElement("h3");
+      heading.textContent = "Sudo Password Required";
+
+      const hint = document.createElement("p");
+      hint.className = "sudo-modal-hint";
+      hint.textContent =
+        "The Ollama update script requires elevated privileges. Enter your sudo password below - it is used only for this operation and is never stored or logged.";
+
+      const label = document.createElement("label");
+      label.htmlFor = "sudoPasswordInputFallback";
+      label.textContent = "Password";
+
+      const input = document.createElement("input");
+      input.type = "password";
+      input.id = "sudoPasswordInputFallback";
+      input.autocomplete = "current-password";
+      input.placeholder = "Enter sudo password";
+
+      const actions = document.createElement("div");
+      actions.className = "sudo-modal-actions";
+
+      const cancelButton = document.createElement("button");
+      cancelButton.type = "button";
+      cancelButton.id = "sudoCancelBtn";
+      cancelButton.className = "btn";
+      cancelButton.textContent = "Cancel";
+
+      const confirmButton = document.createElement("button");
+      confirmButton.type = "submit";
+      confirmButton.id = "sudoConfirmBtn";
+      confirmButton.className = "btn btn-warning";
+      confirmButton.textContent = "Run Update";
+
+      actions.appendChild(cancelButton);
+      actions.appendChild(confirmButton);
+      fallbackForm.appendChild(heading);
+      fallbackForm.appendChild(hint);
+      fallbackForm.appendChild(label);
+      fallbackForm.appendChild(input);
+      fallbackForm.appendChild(actions);
+      fallbackDialog.appendChild(fallbackForm);
+      document.body.appendChild(fallbackDialog);
+
+      const cleanupFallback = (value) => {
+        fallbackDialog.remove();
+        resolve(value);
+      };
+
+      fallbackForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        cleanupFallback(String(input.value));
+      });
+
+      cancelButton.addEventListener("click", () => {
+        cleanupFallback(null);
+      });
+
+      fallbackDialog.addEventListener("cancel", (event) => {
+        event.preventDefault();
+        cleanupFallback(null);
+      });
+
+      input.focus();
       return;
     }
 

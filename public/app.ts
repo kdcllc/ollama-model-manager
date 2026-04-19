@@ -71,19 +71,21 @@ function wireEvents() {
 
   el.updateOllamaBtn.addEventListener("click", async () => {
     const openDialog = window.openSudoPasswordDialog;
-    if (typeof openDialog !== "function") {
-      log("Unable to open password dialog component.");
-      return;
-    }
-
-    const sudoPassword = await openDialog();
-    if (sudoPassword === null) {
-      log("Ollama update canceled.");
-      return;
+    let sudoPassword: string | null = null;
+    if (typeof openDialog === "function") {
+      sudoPassword = await openDialog();
+      if (sudoPassword === null) {
+        log("Ollama update canceled.");
+        return;
+      }
     }
 
     await runAction("Updating Ollama runtime...", async () => {
-      const result = await apiPost("/api/system/update-ollama", { confirm: true, sudoPassword });
+      const body: Record<string, unknown> = { confirm: true };
+      if (sudoPassword !== null) {
+        body.sudoPassword = sudoPassword;
+      }
+      const result = await apiPost("/api/system/update-ollama", body);
       log(
         result.ok
           ? "Ollama update completed successfully."

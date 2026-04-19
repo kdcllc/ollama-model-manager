@@ -181,9 +181,20 @@ function createSystemRouter({
       return;
     }
 
-    const rawPassword = req.body?.sudoPassword;
-    const sudoPassword = typeof rawPassword === "string" ? rawPassword.replace(/[\r\n]/g, "") : "";
-    const result = sudoPassword
+    const hasSudoPassword =
+      req.body != null &&
+      typeof req.body === "object" &&
+      Object.prototype.hasOwnProperty.call(req.body, "sudoPassword");
+
+    if (hasSudoPassword && typeof req.body.sudoPassword !== "string") {
+      res.status(400).json({
+        error: "Field sudoPassword must be a string when provided."
+      });
+      return;
+    }
+
+    const sudoPassword = hasSudoPassword ? req.body.sudoPassword.replace(/[\r\n]/g, "") : "";
+    const result = hasSudoPassword
       ? await runCommandWithSudoPassword(config.ollamaUpdateCommand, sudoPassword, config.updateTimeoutMs)
       : await runCommand(config.ollamaUpdateCommand, config.updateTimeoutMs);
     res.status(result.ok ? 200 : 500).json({

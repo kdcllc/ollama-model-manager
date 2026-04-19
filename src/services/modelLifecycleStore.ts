@@ -75,7 +75,7 @@ export class ModelLifecycleStore {
       name,
       key,
       state,
-      lastError: options?.error || (state === "failed" ? existing.lastError : ""),
+      lastError: options?.error ?? (state === "failed" ? existing.lastError : ""),
       progress: options?.progress === undefined ? existing.progress : options.progress,
       updatedAt: now,
       lastPulledAt: options?.markPulled ? now : existing.lastPulledAt,

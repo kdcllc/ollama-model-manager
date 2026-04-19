@@ -35,7 +35,7 @@ export function isRunningInWsl(): boolean {
   }
 
   try {
-    const procVersion = fs.readFileSync("/proc/version", "utf-8");
+    const procVersion = fs.readFileSync("/proc/version", "utf8");
     return /microsoft/i.test(procVersion);
   } catch {
     return false;
@@ -139,7 +139,7 @@ function isIpv4Address(value: string): boolean {
  */
 function readNameserverIp(): string | null {
   try {
-    const resolveConf = fs.readFileSync("/etc/resolv.conf", "utf-8");
+    const resolveConf = fs.readFileSync("/etc/resolv.conf", "utf8");
     const match = resolveConf.match(/^nameserver\s+([\d.]+)/m);
     return match ? match[1] : null;
   } catch {
@@ -156,7 +156,7 @@ function readNameserverIp(): string | null {
  */
 function readDefaultGatewayIp(): string | null {
   try {
-    const routeTable = fs.readFileSync("/proc/net/route", "utf-8");
+    const routeTable = fs.readFileSync("/proc/net/route", "utf8");
     for (const line of routeTable.split("\n").slice(1)) {
       const cols = line.trim().split(/\s+/);
       // /proc/net/route columns (0-indexed): 0=Iface, 1=Destination, 2=Gateway, 3=Flags, ...
