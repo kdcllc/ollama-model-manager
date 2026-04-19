@@ -437,6 +437,56 @@ textarea {
   white-space: pre-wrap;
 }
 
+.custom-model-guide {
+  margin-top: 0.85rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.custom-model-example-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+
+.custom-model-example {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.8rem;
+  background: rgba(17, 34, 50, 0.7);
+}
+
+.custom-model-example h3 {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+}
+
+.custom-model-code {
+  margin: 0.55rem 0 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #0f1d2c;
+  padding: 0.7rem;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.78rem;
+  color: #bfe7ff;
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
+
+.custom-model-checklist {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.custom-model-checklist code,
+.hint code {
+  font-family: "IBM Plex Mono", monospace;
+  color: #bfe7ff;
+}
+
 .gpu-panel {
   margin-top: 0.85rem;
   display: grid;

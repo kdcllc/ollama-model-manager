@@ -94,7 +94,7 @@
             <textarea
               id="createModelfile"
               rows="6"
-              placeholder="FROM llama3.2:3b-instruct-q4_K_M\nSYSTEM &quot;You are a precise coding assistant.&quot;\nPARAMETER temperature 0.2"
+              placeholder="FROM qwen2.5-coder:7b\nSYSTEM &quot;You help with local repo work. Keep answers short, practical, and safe to run.&quot;\nPARAMETER temperature 0.2\nPARAMETER num_ctx 8192"
               required
             ></textarea>
           </div>
@@ -102,7 +102,46 @@
             <button type="submit" class="btn btn-primary">Create Model</button>
           </div>
         </form>
-        <p class="hint">Use standard Ollama Modelfile directives such as FROM, SYSTEM, and PARAMETER.</p>
+        <p class="hint">
+          Start with a base model tag you already pulled. Keep the first version small: define
+          behavior in <code>SYSTEM</code>, then tune one <code>PARAMETER</code> at a time.
+        </p>
+        <div class="custom-model-guide" aria-label="Custom model examples">
+          <p class="hint">
+            Practical starters you can paste into the Modelfile box, then rename for your own use:
+          </p>
+          <div class="custom-model-example-grid">
+            <article class="custom-model-example">
+              <h3>Code helper</h3>
+              <p class="hint">Good for deterministic repo Q&amp;A and implementation help.</p>
+              <pre class="custom-model-code">FROM qwen2.5-coder:7b
+SYSTEM "You are a precise coding assistant. Explain tradeoffs briefly and prefer production-safe changes."
+PARAMETER temperature 0.2
+PARAMETER num_ctx 8192</pre>
+            </article>
+            <article class="custom-model-example">
+              <h3>Support triage helper</h3>
+              <p class="hint">Useful for summarizing issues and suggesting next steps.</p>
+              <pre class="custom-model-code">FROM llama3.2:3b-instruct-q4_K_M
+SYSTEM "You triage support requests. Summarize the issue, ask for missing facts, and suggest the next action."
+PARAMETER temperature 0.3
+PARAMETER top_p 0.9</pre>
+            </article>
+            <article class="custom-model-example">
+              <h3>Strict JSON responder</h3>
+              <p class="hint">Helpful when another tool expects machine-readable output.</p>
+              <pre class="custom-model-code">FROM mistral:latest
+SYSTEM "Return valid JSON only with keys result, confidence, and follow_up."
+PARAMETER temperature 0.1
+PARAMETER stop "```"</pre>
+            </article>
+          </div>
+          <ul class="custom-model-checklist hint">
+            <li>Use a new name for each variation so you can compare behavior side by side.</li>
+            <li>If a build looks wrong, keep the same <code>FROM</code> line and only rewrite <code>SYSTEM</code> first.</li>
+            <li>If the model feels too random, lower <code>temperature</code> before changing anything else.</li>
+          </ul>
+        </div>
       </section>
 
       <section class="panel">
