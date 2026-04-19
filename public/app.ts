@@ -19,7 +19,8 @@ const state = {
   uiTierFilter: "all",
   uiBestForFilter: "",
   modelRenderExpanded: false,
-  modelRenderLimit: 180
+  modelRenderLimit: 180,
+  lastDetailsTrigger: null
 };
 
 const el = {
@@ -28,7 +29,12 @@ const el = {
   updateOllamaBtn: document.getElementById("updateOllamaBtn"),
   pullForm: document.getElementById("pullForm"),
   pullName: document.getElementById("pullName"),
+  createForm: document.getElementById("createForm"),
+  createName: document.getElementById("createName"),
+  createModelfile: document.getElementById("createModelfile"),
   modelsGrid: document.getElementById("modelsGrid"),
+  detailsPanel: document.getElementById("detailsPanel"),
+  detailsHeading: document.getElementById("detailsHeading"),
   detailsContent: document.getElementById("detailsContent"),
   activityLog: document.getElementById("activityLog"),
   modelCardTemplate: document.getElementById("modelCardTemplate"),
@@ -67,15 +73,22 @@ function wireEvents() {
   el.refreshBtn.addEventListener("click", () => refreshAll());
 
   el.updateOllamaBtn.addEventListener("click", async () => {
-    const confirmed = confirm(
-      "Run Ollama update on this machine now? This may take a few minutes."
-    );
-    if (!confirmed) {
-      return;
+    const openDialog = window.openSudoPasswordDialog;
+    let sudoPassword: string | null = null;
+    if (typeof openDialog === "function") {
+      sudoPassword = await openDialog();
+      if (sudoPassword === null) {
+        log("Ollama update canceled.");
+        return;
+      }
     }
 
     await runAction("Updating Ollama runtime...", async () => {
-      const result = await apiPost("/api/system/update-ollama", { confirm: true });
+      const body: Record<string, unknown> = { confirm: true };
+      if (sudoPassword !== null) {
+        body.sudoPassword = sudoPassword;
+      }
+      const result = await apiPost("/api/system/update-ollama", body);
       log(
         result.ok
           ? "Ollama update completed successfully."
@@ -92,6 +105,7 @@ function wireEvents() {
 
   el.pullForm.addEventListener("submit", async (event) => {
     event.preventDefault();
+    const trigger = event.submitter || document.activeElement;
     const name = el.pullName.value.trim();
     if (!name) {
       return;
@@ -106,8 +120,32 @@ function wireEvents() {
       await loadRecommendations();
     });
 
-    await showDetails(state.selectedModel || name);
+    await showDetails(state.selectedModel || name, { trigger });
   });
+
+  if (el.createForm) {
+    el.createForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const trigger = event.submitter || document.activeElement;
+      const name = String(el.createName?.value || "").trim();
+      const modelfile = String(el.createModelfile?.value || "").trim();
+
+      if (!name || !modelfile) {
+        log("Custom model name and Modelfile are required.");
+        return;
+      }
+
+      await runAction(`Creating custom model ${name}...`, async () => {
+        const result = await apiPost("/api/models/create", { name, modelfile });
+        log(`Custom model build finished for ${name}.`);
+        state.selectedModel = result.model?.name || name;
+        await loadModels({ refreshSelected: false });
+        await loadRecommendations();
+      });
+
+      await showDetails(state.selectedModel || name, { trigger });
+    });
+  }
 
   el.saveOptimizationBtn.addEventListener("click", async () => {
     await runAction("Saving optimization preferences...", async () => {
@@ -291,6 +329,8 @@ async function loadModels(options = {}) {
       const found = state.models.find((m) => m.name === state.selectedModel);
       if (found) {
         await showDetails(found.name);
+      } else {
+        resetDetails();
       }
     }
   } catch (error) {
@@ -432,6 +472,8 @@ function syncViewModeButtons() {
   const cardsActive = state.uiViewMode === "cards";
   el.viewCardsBtn.classList.toggle("btn-primary", cardsActive);
   el.viewListBtn.classList.toggle("btn-primary", !cardsActive);
+  el.viewCardsBtn.setAttribute("aria-pressed", String(cardsActive));
+  el.viewListBtn.setAttribute("aria-pressed", String(!cardsActive));
 }
 
 function normalizeModelSearchText(model) {
@@ -579,7 +621,7 @@ function renderFilterChips() {
         (chip.type === "tier" && state.uiTierFilter === chip.value) ||
         (chip.type === "bestFor" && state.uiBestForFilter === chip.value);
 
-      return `<button class="chip${active ? " chip-active" : ""}" data-chip-type="${escapeHtml(chip.type)}" data-chip-value="${escapeHtml(chip.value)}" type="button">${escapeHtml(chip.label)}</button>`;
+      return `<button class="chip${active ? " chip-active" : ""}" data-chip-type="${escapeHtml(chip.type)}" data-chip-value="${escapeHtml(chip.value)}" type="button" aria-pressed="${active ? "true" : "false"}">${escapeHtml(chip.label)}</button>`;
     })
     .join("");
 
@@ -646,6 +688,9 @@ function renderModelsSummary(totalCount, matchedCount, shownCount) {
 function createModelCardNode(model) {
   const fragment = el.modelCardTemplate.content.cloneNode(true);
   const card = fragment.querySelector(".card");
+  card.classList.add("card-interactive");
+  card.tabIndex = 0;
+  card.setAttribute("aria-label", `Model ${model.name}. Press Enter or Space for details.`);
   fragment.querySelector(".model-name").textContent = model.name;
   fragment.querySelector(".model-size").textContent = formatBytes(model.size || 0);
 
@@ -672,9 +717,14 @@ function createModelCardNode(model) {
     ? "Updated: " + new Date(model.modifiedAt).toLocaleString()
     : "Updated: unknown";
 
-  fragment.querySelector(".view-btn").addEventListener("click", () => showDetails(model.name));
-  fragment.querySelector(".pull-btn").addEventListener("click", () => pullModel(model.name));
-  fragment.querySelector(".delete-btn").addEventListener("click", () => deleteModel(model.name));
+  const viewBtn = fragment.querySelector(".view-btn");
+  const pullBtn = fragment.querySelector(".pull-btn");
+  const deleteBtn = fragment.querySelector(".delete-btn");
+
+  bindModelEntryInteractions(card, model);
+  bindModelAction(viewBtn, () => showDetails(model.name, { trigger: viewBtn }));
+  bindModelAction(pullBtn, () => pullModel(model.name, { trigger: pullBtn }));
+  bindModelAction(deleteBtn, () => deleteModel(model.name, { trigger: deleteBtn }));
 
   if (state.selectedModel === model.name) {
     card.classList.add("card-selected");
@@ -685,7 +735,9 @@ function createModelCardNode(model) {
 
 function createModelRowNode(model) {
   const row = document.createElement("article");
-  row.className = "model-row";
+  row.className = "model-row model-row-interactive";
+  row.tabIndex = 0;
+  row.setAttribute("aria-label", `Model ${model.name}. Press Enter or Space for details.`);
   if (state.selectedModel === model.name) {
     row.classList.add("model-row-selected");
   }
@@ -706,17 +758,64 @@ function createModelRowNode(model) {
       <div class="tags-row">${tagsHtml} ${tierHtml}</div>
     </div>
     <div class="actions-row">
-      <button class="btn btn-small view-btn">Details</button>
-      <button class="btn btn-small btn-primary pull-btn">Update</button>
-      <button class="btn btn-small btn-danger delete-btn">Delete</button>
+      <button class="btn btn-small view-btn" type="button">Details</button>
+      <button class="btn btn-small btn-primary pull-btn" type="button">Update</button>
+      <button class="btn btn-small btn-danger delete-btn" type="button">Delete</button>
     </div>
   `;
 
-  row.querySelector(".view-btn").addEventListener("click", () => showDetails(model.name));
-  row.querySelector(".pull-btn").addEventListener("click", () => pullModel(model.name));
-  row.querySelector(".delete-btn").addEventListener("click", () => deleteModel(model.name));
+  const viewBtn = row.querySelector(".view-btn");
+  const pullBtn = row.querySelector(".pull-btn");
+  const deleteBtn = row.querySelector(".delete-btn");
+
+  bindModelEntryInteractions(row, model);
+  bindModelAction(viewBtn, () => showDetails(model.name, { trigger: viewBtn }));
+  bindModelAction(pullBtn, () => pullModel(model.name, { trigger: pullBtn }));
+  bindModelAction(deleteBtn, () => deleteModel(model.name, { trigger: deleteBtn }));
 
   return row;
+}
+
+function bindModelEntryInteractions(container, model) {
+  container.addEventListener("click", (event) => {
+    const target = event.target;
+    if (target instanceof Element && target.closest("button")) {
+      return;
+    }
+    showDetails(model.name, { trigger: container });
+  });
+
+  container.addEventListener("keydown", (event) => {
+    if (event.target !== container) {
+      return;
+    }
+
+    if (event.key !== "Enter" && event.key !== " ") {
+      return;
+    }
+
+    event.preventDefault();
+    showDetails(model.name, { trigger: container });
+  });
+}
+
+function bindModelAction(button, action) {
+  button.addEventListener("click", (event) => {
+    event.stopPropagation();
+    action();
+  });
+
+  button.addEventListener("keydown", (event) => {
+    if (event.key !== " " && event.key !== "Enter") {
+      return;
+    }
+
+    event.stopPropagation();
+    if (event.key === " ") {
+      event.preventDefault();
+      action();
+    }
+  });
 }
 
 function renderModelGroup(container, label, models) {
@@ -785,12 +884,14 @@ function renderModels() {
   updateModelsDisplay();
 }
 
-async function showDetails(name) {
+async function showDetails(name, options = {}) {
   state.selectedModel = name;
+  rememberDetailsTrigger(options.trigger);
   updateModelsDisplay();
 
   el.detailsContent.innerHTML = `<p class="hint">Loading details for <strong>${escapeHtml(name)}</strong>...</p>`;
-  document.getElementById("detailsPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+  el.detailsPanel?.scrollIntoView({ behavior: "smooth", block: "start" });
+  focusDetailsPanel();
 
   await runAction(
     `Loading details for ${name}...`,
@@ -800,6 +901,46 @@ async function showDetails(name) {
     },
     { silentSuccess: true }
   );
+}
+
+function rememberDetailsTrigger(trigger) {
+  if (trigger instanceof HTMLElement) {
+    state.lastDetailsTrigger = trigger;
+    return;
+  }
+
+  if (document.activeElement instanceof HTMLElement) {
+    state.lastDetailsTrigger = document.activeElement;
+  }
+}
+
+function focusDetailsPanel() {
+  const focusTarget = el.detailsHeading || el.detailsPanel;
+  if (focusTarget instanceof HTMLElement) {
+    focusTarget.focus({ preventScroll: true });
+  }
+}
+
+function resetDetails(options = {}) {
+  state.selectedModel = null;
+  el.detailsContent.innerHTML =
+    "<p class='details-empty'>No model selected. Choose a model above to inspect metadata, update it, or delete it.</p>";
+  updateModelsDisplay();
+
+  if (options.restoreFocus) {
+    focusReturnTarget();
+  }
+}
+
+function focusReturnTarget() {
+  const fallbackTargets = [state.lastDetailsTrigger, el.modelSearchInput, el.pullName, el.refreshBtn];
+  const nextTarget = fallbackTargets.find(
+    (target) => target instanceof HTMLElement && target.isConnected && !target.hasAttribute("disabled")
+  );
+
+  if (nextTarget instanceof HTMLElement) {
+    nextTarget.focus({ preventScroll: false });
+  }
 }
 
 function deriveLibraryUrl(modelName) {
@@ -852,10 +993,10 @@ function renderDetails(payload, options = {}) {
       </div>
 
       <div class="fetch-section">
-        <label>Auto-populate from Ollama Library</label>
+        <label for="libraryUrlInput">Auto-populate from Ollama Library</label>
         <div class="inline-form">
           <input id="libraryUrlInput" type="text" value="${escapeHtml(libraryUrl)}" placeholder="https://ollama.com/library/..." />
-          <button id="fetchLibraryBtn" class="btn btn-small btn-primary">Fetch</button>
+          <button id="fetchLibraryBtn" class="btn btn-small btn-primary" type="button">Fetch</button>
         </div>
         <p id="fetchStatus" class="hint">${escapeHtml(fetchStatus || metadata.libraryFetchError || "")}</p>
       </div>
@@ -881,7 +1022,7 @@ function renderDetails(payload, options = {}) {
         <textarea id="metaTips" rows="3">${escapeHtml(metadata.extraTips || "")}</textarea>
       </div>
       <div class="actions-row">
-        <button id="saveMetadataBtn" class="btn btn-primary">Save</button>
+        <button id="saveMetadataBtn" class="btn btn-primary" type="button">Save</button>
       </div>
     </div>
   `;
@@ -1012,7 +1153,8 @@ function stopGpuLive() {
   log("Stopped GPU live monitoring.");
 }
 
-async function pullModel(name) {
+async function pullModel(name, options = {}) {
+  rememberDetailsTrigger(options.trigger);
   await runAction(`Updating ${name}...`, async () => {
     const result = await apiPost("/api/models/pull", { name });
     log(`Updated model ${name}.`);
@@ -1021,24 +1163,25 @@ async function pullModel(name) {
     await loadRecommendations();
   });
 
-  await showDetails(state.selectedModel || name);
+  await showDetails(state.selectedModel || name, { trigger: options.trigger });
 }
 
-async function deleteModel(name) {
+async function deleteModel(name, options = {}) {
+  rememberDetailsTrigger(options.trigger);
   const confirmed = confirm(`Delete model ${name}? This cannot be undone.`);
   if (!confirmed) {
     return;
   }
 
   await runAction(`Deleting ${name}...`, async () => {
+    const deletedSelectedModel = state.selectedModel === name;
     await apiDelete(`/api/models/${encodeURIComponent(name)}`);
     log(`Deleted model ${name}.`);
-    if (state.selectedModel === name) {
-      state.selectedModel = null;
-      el.detailsContent.textContent = "No model selected.";
-    }
     await loadModels();
     await loadRecommendations();
+    if (deletedSelectedModel) {
+      resetDetails({ restoreFocus: true });
+    }
   });
 }
 
@@ -1059,6 +1202,22 @@ async function runAction(message, action, options = {}) {
     }
   } catch (error) {
     log("Error: " + error.message);
+
+    const payload = error?.payload;
+    if (payload && typeof payload === "object") {
+      if (payload.exitCode !== undefined) {
+        log("exitCode: " + String(payload.exitCode));
+      }
+      if (payload.command) {
+        log("command: " + String(payload.command));
+      }
+      if (payload.stdout) {
+        log("stdout:\n" + String(payload.stdout));
+      }
+      if (payload.stderr) {
+        log("stderr:\n" + String(payload.stderr));
+      }
+    }
   } finally {
     state.busy = false;
     setButtonsDisabled(false);
@@ -1135,7 +1294,16 @@ async function handleResponse(response) {
   const data = text ? tryParseJson(text) : {};
 
   if (!response.ok) {
-    throw new Error(data.error || data.message || `Request failed (${response.status})`);
+    const detail =
+      data?.error ||
+      data?.message ||
+      data?.stderr ||
+      (typeof data?.raw === "string" ? data.raw : "");
+
+    const error = new Error(detail ? `${detail} (HTTP ${response.status})` : `Request failed (HTTP ${response.status})`);
+    error.status = response.status;
+    error.payload = data;
+    throw error;
   }
 
   return data;

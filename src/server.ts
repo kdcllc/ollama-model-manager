@@ -3,6 +3,7 @@ import express from "express";
 import config from "./config";
 import { OllamaClient } from "./services/ollamaClient";
 import { MetadataStore } from "./services/metadataStore";
+import { ModelLifecycleStore } from "./services/modelLifecycleStore";
 import { OptimizationStore } from "./services/optimizationStore";
 import { SystemProbe } from "./services/systemProbe";
 const { createModelsRouter } = require("./routes/models");
@@ -15,6 +16,10 @@ export async function startServer(): Promise<void> {
 
   const ollamaClient = new OllamaClient(config.ollamaBaseUrl);
   const metadataStore = new MetadataStore(config.catalogPath, config.userMetadataPath);
+  const lifecycleStore = new ModelLifecycleStore(
+    config.lifecycleStatePath,
+    config.lifecycleHistoryPath
+  );
   const optimizationStore = new OptimizationStore(config.optimizationConfigPath);
   const systemProbe = new SystemProbe({
     timeoutMs: config.systemProbeTimeoutMs,
@@ -22,6 +27,7 @@ export async function startServer(): Promise<void> {
   });
 
   await metadataStore.init();
+  await lifecycleStore.init();
   await optimizationStore.init();
 
   app.use(
@@ -29,6 +35,7 @@ export async function startServer(): Promise<void> {
     createModelsRouter({
       ollamaClient,
       metadataStore,
+      lifecycleStore,
       systemProbe
     })
   );
@@ -39,7 +46,8 @@ export async function startServer(): Promise<void> {
       ollamaClient,
       config,
       systemProbe,
-      optimizationStore
+      optimizationStore,
+      lifecycleStore
     })
   );
 
@@ -51,6 +59,27 @@ export async function startServer(): Promise<void> {
 
   app.listen(config.port, () => {
     console.log(`Ollama manager listening on http://localhost:${config.port}`);
+    console.log(`Connecting to Ollama at ${config.ollamaBaseUrl}`);
+    if (config.ollamaWslDetected) {
+      console.log(
+        `WSL detected: Ollama URL method=${config.ollamaBaseUrlResolutionMethod}` +
+          (config.ollamaBaseUrlResolutionReason
+            ? ` (${config.ollamaBaseUrlResolutionReason})`
+            : "")
+      );
+    }
+    if (config.ollamaBaseUrlResolutionMethod === "wsl-localhost-default") {
+      console.log(
+        "Using WSL localhost mode by default. " +
+          "Set OLLAMA_WSL_USE_WINDOWS_HOST=true to try Windows host IP resolution."
+      );
+    }
+    if (config.ollamaBaseUrlIsWslOverride) {
+      console.log(
+        "WSL detected: using Windows host IP for Ollama. " +
+          "Override with OLLAMA_BASE_URL=http://127.0.0.1:11434 if Ollama runs inside WSL."
+      );
+    }
   });
 }
 

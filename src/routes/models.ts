@@ -1,5 +1,6 @@
 import type { Request, Response, Router } from "express";
 import type { MetadataStore } from "../services/metadataStore";
+import type { ModelLifecycleStore } from "../services/modelLifecycleStore";
 import type { OllamaClient } from "../services/ollamaClient";
 import type { SystemProbe } from "../services/systemProbe";
 import type { ModelMetadata } from "../types";
@@ -11,6 +12,7 @@ const { fetchLibraryData } = require("../services/libraryFetcher");
 interface ModelsRouterDeps {
   ollamaClient: OllamaClient;
   metadataStore: MetadataStore;
+  lifecycleStore: ModelLifecycleStore;
   systemProbe: SystemProbe;
 }
 
@@ -20,7 +22,12 @@ interface HttpError {
   message?: string;
 }
 
-function createModelsRouter({ ollamaClient, metadataStore, systemProbe }: ModelsRouterDeps): Router {
+function createModelsRouter({
+  ollamaClient,
+  metadataStore,
+  lifecycleStore,
+  systemProbe
+}: ModelsRouterDeps): Router {
   const router: Router = express.Router();
 
   router.get("/", async (_req: Request, res: Response) => {
@@ -31,7 +38,8 @@ function createModelsRouter({ ollamaClient, metadataStore, systemProbe }: Models
         systemProbe.getCapabilities()
       ]);
 
-      const enriched = merged.map((model) => ({
+      const withLifecycle = await lifecycleStore.attachLifecycle(merged);
+      const enriched = withLifecycle.map((model) => ({
         ...model,
         suggestionTier: classifySuggestionTier(model.name, capabilities)
       }));
@@ -49,13 +57,49 @@ function createModelsRouter({ ollamaClient, metadataStore, systemProbe }: Models
     }
 
     try {
-      let payload = await loadModelPayload({ name, ollamaClient, metadataStore });
+      let payload = await loadModelPayload({
+        name,
+        ollamaClient,
+        metadataStore,
+        lifecycleStore
+      });
 
       if (shouldAutoEnrich(payload.metadata)) {
-        payload = await enrichModelMetadata({ name, ollamaClient, metadataStore });
+        payload = await enrichModelMetadata({
+          name,
+          ollamaClient,
+          metadataStore,
+          lifecycleStore
+        });
       }
 
       res.json(payload);
+    } catch (error: unknown) {
+      handleError(res, error);
+    }
+  });
+
+  router.get("/:name/history", async (req: Request, res: Response) => {
+    const name = decodeURIComponent(req.params.name || "").trim();
+    if (!name) {
+      res.status(400).json({ error: "Model name is required." });
+      return;
+    }
+
+    const limit = Number(req.query.limit || 100);
+    try {
+      const events = await lifecycleStore.listHistory({ name, limit });
+      res.json({ ok: true, events });
+    } catch (error: unknown) {
+      handleError(res, error);
+    }
+  });
+
+  router.get("/history/all", async (req: Request, res: Response) => {
+    const limit = Number(req.query.limit || 100);
+    try {
+      const events = await lifecycleStore.listHistory({ limit });
+      res.json({ ok: true, events });
     } catch (error: unknown) {
       handleError(res, error);
     }
@@ -69,12 +113,213 @@ function createModelsRouter({ ollamaClient, metadataStore, systemProbe }: Models
     }
 
     try {
+      await lifecycleStore.setState(name, "pulling", {
+        error: "",
+        progress: null
+      });
+      await lifecycleStore.recordEvent({
+        name,
+        action: "pull-started",
+        message: "Model pull started.",
+        ok: true
+      });
+
       const result = await ollamaClient.pullModel(name);
-      const payload = await enrichModelMetadata({ name, ollamaClient, metadataStore });
+      await lifecycleStore.setState(name, "ready", {
+        markPulled: true,
+        error: "",
+        progress: null
+      });
+      await lifecycleStore.recordEvent({
+        name,
+        action: "pull-succeeded",
+        message: "Model pull completed.",
+        ok: true,
+        details: summarizeResult(result)
+      });
+
+      const payload = await enrichModelMetadata({
+        name,
+        ollamaClient,
+        metadataStore,
+        lifecycleStore
+      });
       res.json({ ok: true, result, model: payload });
     } catch (error: unknown) {
+      await lifecycleStore.setState(name, "failed", {
+        error: getErrorMessage(error)
+      });
+      await lifecycleStore.recordEvent({
+        name,
+        action: "pull-failed",
+        message: "Model pull failed.",
+        ok: false,
+        details: {
+          error: getErrorMessage(error)
+        }
+      });
       handleError(res, error);
     }
+  });
+
+  router.post("/create", async (req: Request, res: Response) => {
+    const name = String(req.body?.name || "").trim();
+    const modelfile = String(req.body?.modelfile || "").trim();
+
+    if (!name) {
+      res.status(400).json({ error: "Field name is required." });
+      return;
+    }
+
+    if (!modelfile) {
+      res.status(400).json({ error: "Field modelfile is required." });
+      return;
+    }
+
+    try {
+      await lifecycleStore.setState(name, "building", {
+        error: "",
+        progress: null
+      });
+      await lifecycleStore.recordEvent({
+        name,
+        action: "create-started",
+        message: "Custom model build started.",
+        ok: true,
+        details: {
+          modelfileLength: modelfile.length
+        }
+      });
+
+      const result = await ollamaClient.createModel(name, modelfile);
+
+      await lifecycleStore.setState(name, "ready", {
+        markPulled: true,
+        error: "",
+        progress: null
+      });
+      await lifecycleStore.recordEvent({
+        name,
+        action: "create-succeeded",
+        message: "Custom model build completed.",
+        ok: true,
+        details: summarizeResult(result)
+      });
+
+      const payload = await loadModelPayload({
+        name,
+        ollamaClient,
+        metadataStore,
+        lifecycleStore
+      });
+
+      res.json({ ok: true, result, model: payload });
+    } catch (error: unknown) {
+      await lifecycleStore.setState(name, "failed", {
+        error: getErrorMessage(error)
+      });
+      await lifecycleStore.recordEvent({
+        name,
+        action: "create-failed",
+        message: "Custom model build failed.",
+        ok: false,
+        details: {
+          error: getErrorMessage(error)
+        }
+      });
+      handleError(res, error);
+    }
+  });
+
+  router.post("/batch-pull", async (req: Request, res: Response) => {
+    const names = normalizeStringArray(req.body?.names);
+    if (!names.length) {
+      res.status(400).json({ error: "Field names must be a non-empty array." });
+      return;
+    }
+
+    const startedAt = new Date().toISOString();
+    await lifecycleStore.recordEvent({
+      name: "*",
+      action: "batch-pull-started",
+      message: `Batch pull started for ${names.length} model(s).`,
+      ok: true,
+      details: { names }
+    });
+
+    const results: Array<{ name: string; ok: boolean; error?: string }> = [];
+
+    for (const name of names) {
+      try {
+        await lifecycleStore.setState(name, "pulling", {
+          error: "",
+          progress: null
+        });
+        await lifecycleStore.recordEvent({
+          name,
+          action: "pull-started",
+          message: "Model pull started from batch.",
+          ok: true
+        });
+
+        await ollamaClient.pullModel(name);
+        await lifecycleStore.setState(name, "ready", {
+          markPulled: true,
+          error: "",
+          progress: null
+        });
+        await lifecycleStore.recordEvent({
+          name,
+          action: "pull-succeeded",
+          message: "Model pull completed from batch.",
+          ok: true
+        });
+
+        results.push({ name, ok: true });
+      } catch (error: unknown) {
+        await lifecycleStore.setState(name, "failed", {
+          error: getErrorMessage(error)
+        });
+        await lifecycleStore.recordEvent({
+          name,
+          action: "pull-failed",
+          message: "Model pull failed from batch.",
+          ok: false,
+          details: {
+            error: getErrorMessage(error)
+          }
+        });
+
+        results.push({
+          name,
+          ok: false,
+          error: getErrorMessage(error)
+        });
+      }
+    }
+
+    const failed = results.filter((result) => !result.ok).length;
+    await lifecycleStore.recordEvent({
+      name: "*",
+      action: "batch-pull-completed",
+      message: `Batch pull completed (${names.length - failed}/${names.length} successful).`,
+      ok: failed === 0,
+      details: {
+        startedAt,
+        completedAt: new Date().toISOString(),
+        failed,
+        names
+      }
+    });
+
+    res.status(failed > 0 ? 207 : 200).json({
+      ok: failed === 0,
+      results,
+      summary: {
+        total: names.length,
+        failed
+      }
+    });
   });
 
   router.delete("/:name", async (req: Request, res: Response) => {
@@ -85,9 +330,45 @@ function createModelsRouter({ ollamaClient, metadataStore, systemProbe }: Models
     }
 
     try {
+      await lifecycleStore.setState(name, "deleting", {
+        error: "",
+        progress: null
+      });
+      await lifecycleStore.recordEvent({
+        name,
+        action: "delete-started",
+        message: "Model delete started.",
+        ok: true
+      });
+
       const result = await ollamaClient.deleteModel(name);
+      await lifecycleStore.setState(name, "unknown", {
+        markDeleted: true,
+        error: "",
+        progress: null
+      });
+      await lifecycleStore.recordEvent({
+        name,
+        action: "delete-succeeded",
+        message: "Model deleted.",
+        ok: true,
+        details: summarizeResult(result)
+      });
       res.json({ ok: true, result });
     } catch (error: unknown) {
+      await lifecycleStore.setState(name, "failed", {
+        error: getErrorMessage(error),
+        progress: null
+      });
+      await lifecycleStore.recordEvent({
+        name,
+        action: "delete-failed",
+        message: "Model delete failed.",
+        ok: false,
+        details: {
+          error: getErrorMessage(error)
+        }
+      });
       handleError(res, error);
     }
   });
@@ -114,6 +395,13 @@ function createModelsRouter({ ollamaClient, metadataStore, systemProbe }: Models
         extraTips
       });
 
+      await lifecycleStore.recordEvent({
+        name,
+        action: "metadata-updated",
+        message: "Metadata notes updated.",
+        ok: true
+      });
+
       res.json({ ok: true, metadata });
     } catch (error: unknown) {
       handleError(res, error);
@@ -134,7 +422,18 @@ function createModelsRouter({ ollamaClient, metadataStore, systemProbe }: Models
         name,
         ollamaClient,
         metadataStore,
+        lifecycleStore,
         libraryUrl: url || undefined
+      });
+
+      await lifecycleStore.recordEvent({
+        name,
+        action: "metadata-enriched",
+        message: "Model metadata enriched from Ollama library.",
+        ok: true,
+        details: {
+          libraryUrl: payload?.metadata?.libraryUrl || url || ""
+        }
       });
 
       res.json({ ok: true, model: payload });
@@ -165,22 +464,29 @@ function classifySuggestionTier(
 async function loadModelPayload({
   name,
   ollamaClient,
-  metadataStore
+  metadataStore,
+  lifecycleStore
 }: {
   name: string;
   ollamaClient: OllamaClient;
   metadataStore: MetadataStore;
+  lifecycleStore: ModelLifecycleStore;
 }) {
   const [details, metadata] = await Promise.all([
     ollamaClient.showModel(name),
     metadataStore.getMergedMetadata(name)
   ]);
 
+  const lifecycle = await lifecycleStore.getState(name);
+  const variantSummary = summarizeVariantFromMetadata(name, metadata);
+
   return {
     name,
     key: canonicalName(name),
     details,
-    metadata
+    metadata,
+    lifecycle,
+    variantSummary
   };
 }
 
@@ -188,6 +494,7 @@ async function enrichModelMetadata({
   name,
   ollamaClient,
   metadataStore,
+  lifecycleStore,
   libraryUrl = deriveLibraryUrl(name)
 }) {
   const details = await ollamaClient.showModel(name);
@@ -231,12 +538,16 @@ async function enrichModelMetadata({
   }
 
   const finalMetadata = await metadataStore.getMergedMetadata(name);
+  const lifecycle = await lifecycleStore.getState(name);
+  const variantSummary = summarizeVariantFromMetadata(name, finalMetadata);
 
   return {
     name,
     key: canonicalName(name),
     details,
-    metadata: finalMetadata
+    metadata: finalMetadata,
+    lifecycle,
+    variantSummary
   };
 }
 
@@ -278,6 +589,47 @@ function deriveLibraryUrl(modelName: string): string {
   }
 
   return `https://ollama.com/library/${base}`;
+}
+
+function summarizeVariantFromMetadata(name: string, metadata: ModelMetadata) {
+  const [base, tag = "latest"] = String(name || "").split(":");
+  const metadataTags = Array.isArray(metadata?.availableTags)
+    ? metadata.availableTags.map((item) => String(item || "").trim()).filter(Boolean)
+    : [];
+  const tags = dedupe([tag, ...metadataTags]).slice(0, 40);
+
+  return {
+    base,
+    tag,
+    availableTags: tags
+  };
+}
+
+function dedupe(items: string[]): string[] {
+  const seen = new Set<string>();
+  const values: string[] = [];
+
+  for (const item of items) {
+    const key = item.toLowerCase();
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    values.push(item);
+  }
+
+  return values;
+}
+
+function summarizeResult(result: unknown): Record<string, unknown> {
+  if (typeof result === "object" && result !== null) {
+    return result as Record<string, unknown>;
+  }
+
+  return {
+    value: String(result || "")
+  };
 }
 
 function summarizeDetails(details: Record<string, any>) {

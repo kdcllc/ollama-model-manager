@@ -38,6 +38,88 @@ export interface ModelSummary {
   details: Record<string, unknown>;
   metadata?: ModelMetadata;
   suggestionTier?: string;
+  lifecycle?: ModelLifecycleRecord;
+  variantSummary?: ModelVariantSummary;
+}
+
+export type ModelLifecycleState =
+  | "unknown"
+  | "queued"
+  | "pulling"
+  | "building"
+  | "ready"
+  | "failed"
+  | "deleting";
+
+export interface ModelPullProgress {
+  status: string;
+  completed: number;
+  total: number;
+  percent: number;
+}
+
+export interface ModelLifecycleRecord {
+  name: string;
+  key: string;
+  state: ModelLifecycleState;
+  lastError: string;
+  progress: ModelPullProgress | null;
+  lastPulledAt: string;
+  lastDeletedAt: string;
+  updatedAt: string;
+}
+
+export interface ModelVariantSummary {
+  base: string;
+  tag: string;
+  availableTags: string[];
+}
+
+export interface RunningModelSummary {
+  name: string;
+  size: number;
+  digest: string;
+  processor: string;
+  expiresAt: string;
+  details: Record<string, unknown>;
+}
+
+export type ModelHistoryAction =
+  | "pull-started"
+  | "pull-succeeded"
+  | "pull-failed"
+  | "create-started"
+  | "create-succeeded"
+  | "create-failed"
+  | "delete-started"
+  | "delete-succeeded"
+  | "delete-failed"
+  | "metadata-enriched"
+  | "metadata-updated"
+  | "batch-pull-started"
+  | "batch-pull-completed";
+
+export interface ModelHistoryEntry {
+  id: string;
+  name: string;
+  key: string;
+  action: ModelHistoryAction;
+  message: string;
+  ok: boolean;
+  at: string;
+  details?: Record<string, unknown>;
+}
+
+export interface ModelLifecycleSnapshot {
+  schemaVersion: number;
+  modelStates: Record<string, ModelLifecycleRecord>;
+  updatedAt: string;
+}
+
+export interface ModelHistorySnapshot {
+  schemaVersion: number;
+  events: ModelHistoryEntry[];
+  updatedAt: string;
 }
 
 export interface GpuDevice {

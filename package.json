@@ -1,6 +1,6 @@
 {
   "name": "@kdcllc/ollama-model-manager",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "CLI and web UI for managing local Ollama models with hardware-aware recommendations and optimization guidance",
   "license": "MIT",
   "repository": {
@@ -45,7 +45,7 @@
   },
   "scripts": {
     "clean": "rm -rf dist",
-    "build": "npm run clean && tsc -p tsconfig.json && tsc -p tsconfig.public.json && mkdir -p dist/public dist/data && cp public/index.html public/styles.css dist/public/ && cp data/*.json dist/data/",
+    "build": "npm run clean && tsc -p tsconfig.json && tsc -p tsconfig.public.json && mkdir -p dist/public && cp public/index.html public/styles.css dist/public/",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "start": "node dist/src/server.js",
     "start:build": "npm run build && npm run start",

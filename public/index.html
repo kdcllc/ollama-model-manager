@@ -22,6 +22,134 @@
 
     <main class="layout">
       <section class="panel">
+        <h2>Install or Update Model</h2>
+        <form id="pullForm" class="inline-form">
+          <div class="field-group field-grow">
+            <label for="pullName" class="field-label">Model name or tag</label>
+            <input
+              id="pullName"
+              type="text"
+              placeholder="Example: llama3.2:3b-instruct-q4_K_M"
+              required
+            />
+          </div>
+          <button type="submit" class="btn btn-primary">Pull or Update</button>
+        </form>
+        <p class="hint">Tip: Pulling an existing model updates it to the latest available tag.</p>
+      </section>
+
+      <section class="panel">
+        <h2>Installed Models</h2>
+        <div class="models-toolbar">
+          <div class="models-toolbar-main">
+            <div class="field-group toolbar-field toolbar-field-search">
+              <label for="modelSearchInput" class="field-label">Search installed models</label>
+              <input id="modelSearchInput" type="search" placeholder="Search models, tags, tiers..." />
+            </div>
+            <button id="clearModelSearchBtn" class="btn btn-small" type="button">Clear</button>
+            <div class="field-group toolbar-field toolbar-field-compact">
+              <label for="modelSortSelect" class="field-label">Sort installed models</label>
+              <select id="modelSortSelect">
+                <option value="updated-desc">Newest Updated</option>
+                <option value="name-asc">Name (A-Z)</option>
+                <option value="size-desc">Size (Largest)</option>
+                <option value="size-asc">Size (Smallest)</option>
+              </select>
+            </div>
+            <div class="view-toggle-group">
+              <span class="field-label">View mode</span>
+              <div class="view-toggle" role="group" aria-label="Model display mode">
+                <button id="viewCardsBtn" class="btn btn-small btn-primary" type="button">Cards</button>
+                <button id="viewListBtn" class="btn btn-small" type="button">Compact</button>
+              </div>
+            </div>
+          </div>
+          <div id="modelFilterChips" class="chips-row"></div>
+          <div id="modelsSummary" class="hint"></div>
+        </div>
+        <div id="modelsGrid" class="model-groups"></div>
+      </section>
+
+      <section class="panel details-panel" id="detailsPanel" tabindex="-1" aria-labelledby="detailsHeading">
+        <h2 id="detailsHeading" tabindex="-1">Model Details</h2>
+        <div id="detailsContent" class="details-empty" aria-live="polite">
+          No model selected. Choose a model above to inspect metadata, update it, or delete it.
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Create Custom Model</h2>
+        <form id="createForm" class="stack-form">
+          <div class="field-group">
+            <label for="createName" class="field-label">Custom model name</label>
+            <input
+              id="createName"
+              type="text"
+              placeholder="Example: my-team/coding-assistant"
+              required
+            />
+          </div>
+          <div class="field-group">
+            <label for="createModelfile" class="field-label">Modelfile contents</label>
+            <textarea
+              id="createModelfile"
+              rows="6"
+              placeholder="FROM qwen2.5-coder:7b\nSYSTEM &quot;You help with local repo work. Keep answers short, practical, and safe to run.&quot;\nPARAMETER temperature 0.2\nPARAMETER num_ctx 8192"
+              required
+            ></textarea>
+          </div>
+          <div class="actions-row">
+            <button type="submit" class="btn btn-primary">Create Model</button>
+          </div>
+        </form>
+        <p class="hint">
+          Start with a base model tag you already pulled. Keep the first version small: define
+          behavior in <code>SYSTEM</code>, then tune one <code>PARAMETER</code> at a time.
+        </p>
+        <div class="custom-model-guide" aria-label="Custom model examples">
+          <p class="hint">
+            Practical starters you can paste into the Modelfile box, then rename for your own use:
+          </p>
+          <div class="custom-model-example-grid">
+            <article class="custom-model-example">
+              <h3>Code helper</h3>
+              <p class="hint">Good for deterministic repo Q&amp;A and implementation help.</p>
+              <pre class="custom-model-code">FROM qwen2.5-coder:7b
+SYSTEM "You are a precise coding assistant. Explain tradeoffs briefly and prefer production-safe changes."
+PARAMETER temperature 0.2
+PARAMETER num_ctx 8192</pre>
+            </article>
+            <article class="custom-model-example">
+              <h3>Support triage helper</h3>
+              <p class="hint">Useful for summarizing issues and suggesting next steps.</p>
+              <pre class="custom-model-code">FROM llama3.2:3b-instruct-q4_K_M
+SYSTEM "You triage support requests. Summarize the issue, ask for missing facts, and suggest the next action."
+PARAMETER temperature 0.3
+PARAMETER top_p 0.9</pre>
+            </article>
+            <article class="custom-model-example">
+              <h3>Strict JSON responder</h3>
+              <p class="hint">Helpful when another tool expects machine-readable output.</p>
+              <pre class="custom-model-code">FROM mistral:latest
+SYSTEM "Return valid JSON only with keys result, confidence, and follow_up."
+PARAMETER temperature 0.1
+PARAMETER stop "```"</pre>
+            </article>
+          </div>
+          <ul class="custom-model-checklist hint">
+            <li>Use a new name for each variation so you can compare behavior side by side.</li>
+            <li>If a build looks wrong, keep the same <code>FROM</code> line and only rewrite <code>SYSTEM</code> first.</li>
+            <li>If the model feels too random, lower <code>temperature</code> before changing anything else.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Activity</h2>
+        <pre id="activityLog" class="log"></pre>
+      </section>
+
+      <section class="panel">
         <h2>System Profile and Recommendations</h2>
         <div id="systemSummary" class="hint">Loading system profile...</div>
         <div id="setupGuidance" class="hint"></div>
@@ -36,16 +164,22 @@
           </div>
         </div>
         <div class="inline-form">
-          <select id="kvCacheModeSelect">
-            <option value="adaptive">Adaptive</option>
-            <option value="q8_0">q8_0</option>
-            <option value="f16">f16</option>
-          </select>
-          <select id="flashAttentionModeSelect">
-            <option value="auto">Flash Attention Auto</option>
-            <option value="on">Flash Attention On</option>
-            <option value="off">Flash Attention Off</option>
-          </select>
+          <div class="field-group field-grow">
+            <label for="kvCacheModeSelect" class="field-label">KV cache mode</label>
+            <select id="kvCacheModeSelect">
+              <option value="adaptive">Adaptive</option>
+              <option value="q8_0">q8_0</option>
+              <option value="f16">f16</option>
+            </select>
+          </div>
+          <div class="field-group field-grow">
+            <label for="flashAttentionModeSelect" class="field-label">Flash attention mode</label>
+            <select id="flashAttentionModeSelect">
+              <option value="auto">Flash Attention Auto</option>
+              <option value="on">Flash Attention On</option>
+              <option value="off">Flash Attention Off</option>
+            </select>
+          </div>
           <button id="saveOptimizationBtn" class="btn btn-primary" type="button">
             Save Optimization Preferences
           </button>
@@ -68,53 +202,6 @@
         </div>
         <div id="gpuPanel" class="gpu-panel"></div>
       </section>
-
-      <section class="panel">
-        <h2>Install or Update Model</h2>
-        <form id="pullForm" class="inline-form">
-          <input
-            id="pullName"
-            type="text"
-            placeholder="Example: llama3.2:3b-instruct-q4_K_M"
-            required
-          />
-          <button type="submit" class="btn btn-primary">Pull or Update</button>
-        </form>
-        <p class="hint">Tip: Pulling an existing model updates it to the latest available tag.</p>
-      </section>
-
-      <section class="panel">
-        <h2>Installed Models</h2>
-        <div class="models-toolbar">
-          <div class="models-toolbar-main">
-            <input id="modelSearchInput" type="search" placeholder="Search models, tags, tiers..." />
-            <button id="clearModelSearchBtn" class="btn btn-small" type="button">Clear</button>
-            <select id="modelSortSelect" aria-label="Sort models">
-              <option value="updated-desc">Newest Updated</option>
-              <option value="name-asc">Name (A-Z)</option>
-              <option value="size-desc">Size (Largest)</option>
-              <option value="size-asc">Size (Smallest)</option>
-            </select>
-            <div class="view-toggle" role="group" aria-label="Model display mode">
-              <button id="viewCardsBtn" class="btn btn-small btn-primary" type="button">Cards</button>
-              <button id="viewListBtn" class="btn btn-small" type="button">Compact</button>
-            </div>
-          </div>
-          <div id="modelFilterChips" class="chips-row"></div>
-          <div id="modelsSummary" class="hint"></div>
-        </div>
-        <div id="modelsGrid" class="model-groups"></div>
-      </section>
-
-      <section class="panel" id="detailsPanel">
-        <h2>Model Details</h2>
-        <div id="detailsContent" class="details-empty">No model selected.</div>
-      </section>
-
-      <section class="panel">
-        <h2>Activity</h2>
-        <pre id="activityLog" class="log"></pre>
-      </section>
     </main>
 
     <template id="modelCardTemplate">
@@ -129,13 +216,25 @@
           <span class="model-updated"></span>
         </div>
         <div class="actions-row">
-          <button class="btn btn-small view-btn">Details</button>
-          <button class="btn btn-small btn-primary pull-btn">Update</button>
-          <button class="btn btn-small btn-danger delete-btn">Delete</button>
+          <button class="btn btn-small view-btn" type="button">Details</button>
+          <button class="btn btn-small btn-primary pull-btn" type="button">Update</button>
+          <button class="btn btn-small btn-danger delete-btn" type="button">Delete</button>
         </div>
       </article>
     </template>
 
+    <div id="sudoModalRoot"></div>
+    <script
+      src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"
+      integrity="sha384-tMH8h3BGESGckSAVGZ82T9n90ztNXxvdwvdM6UoR56cYcf+0iGXBliJ29D+wZ/x8"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"
+      integrity="sha384-bm7MnzvK++ykSwVJ2tynSE5TRdN+xL418osEVF2DE/L/gfWHj91J2Sphe582B1Bh"
+      crossorigin="anonymous"
+    ></script>
+    <script src="/sudoDialog.js"></script>
     <script src="/app.js"></script>
   </body>
 </html>

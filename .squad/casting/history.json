@@ -1,0 +1,22 @@
+{
+  "universe_usage_history": [
+    {
+      "universe": "The Matrix",
+      "assignment_id": "2026-04-19-local-ollama-dev-initial",
+      "used_at": "2026-04-19T10:37:30.160Z"
+    }
+  ],
+  "assignment_cast_snapshots": {
+    "2026-04-19-local-ollama-dev-initial": {
+      "universe": "The Matrix",
+      "agents": {
+        "lead": "Morpheus",
+        "frontend-dev": "Trinity",
+        "backend-dev": "Neo",
+        "tester": "Switch",
+        "platform-dev": "Tank"
+      },
+      "created_at": "2026-04-19T10:37:30.160Z"
+    }
+  }
+}

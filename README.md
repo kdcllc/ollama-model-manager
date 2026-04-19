@@ -15,19 +15,31 @@ CLI and web UI for managing local Ollama models with hardware-aware recommendati
 
 The application runs as a Node.js server, serves a browser UI on port `3090` by default, talks to the local Ollama daemon at `http://127.0.0.1:11434` by default, and can also be launched directly with `npx`.
 
+## Original Article
+
+This project implements and extends the lifecycle workflow described in the OneUptime article:
+
+- <https://oneuptime.com/blog/post/2026-02-02-ollama-model-management/view#model-lifecycle-workflow>
+
 ## Features
 
 - List installed Ollama models with merged catalog and user metadata.
 - Pull, inspect, enrich, annotate, and delete models from one interface.
+- Create custom models from Modelfile content through the API and web UI.
+- Track per-model lifecycle state (unknown, pulling, building, ready, failed, deleting).
+- Record lifecycle activity history for pull, delete, metadata updates, and enrichment actions.
+- Execute batch pull operations through the API with per-model results.
+- View currently running models via Ollama process status integration.
 - Detect CUDA availability and switch recommendation profiles between GPU and CPU-only systems.
 - Surface adaptive KV cache and Flash Attention guidance based on installed model sizes.
 - Persist optimization preferences and user notes in local JSON data files.
+- Auto-create local JSON data files on first run when missing.
 - Show live GPU status when `nvidia-smi` is available.
 - Optionally trigger an Ollama update command from the UI or API.
 
 ## Requirements
 
-- Linux host.
+- Linux host or WSL (Windows Subsystem for Linux).
 - Node.js `>=18.0.0`.
 - Ollama installed and reachable, typically at `http://127.0.0.1:11434`.
 
@@ -65,6 +77,131 @@ http://localhost:3090
 
 The CLI entry point in [bin/ollama-model-manager](./bin/ollama-model-manager) starts the compiled server from `dist/src/server.js`.
 
+## How to Use
+
+After starting the app, open <http://localhost:3090> and use this flow.
+
+1. Check health and recommendations.
+2. Pull a model from the Install or Update panel.
+3. Open model details and review family, parameter size, quantization, and capabilities.
+4. Use Enrich to auto-populate metadata from the Ollama Library page.
+5. Save your own notes (best-for, not-ideal-for, and tips).
+6. Update a model by pulling it again.
+7. Delete models you no longer need.
+8. Review lifecycle activity through the history endpoints if you want an API-level audit trail.
+
+Create a custom model from the dashboard:
+
+1. Go to the Create Custom Model panel.
+2. Enter a target model name, for example `my-team/coding-assistant`.
+3. Paste a Modelfile body using directives like `FROM`, `SYSTEM`, and `PARAMETER`.
+4. Submit Create Model and wait for build completion.
+5. Open details for the new model and continue with metadata enrichment/notes.
+
+Minimal Modelfile example:
+
+```text
+FROM llama3.2:3b-instruct-q4_K_M
+SYSTEM "You are a precise coding assistant."
+PARAMETER temperature 0.2
+```
+
+### Custom Model Guide
+
+Use this checklist when creating a new model so builds are predictable and easier to debug.
+
+1. Start with a base model you already have installed, or pull it first.
+2. Keep your first Modelfile minimal and add one change at a time.
+3. Use a stable output style in `SYSTEM` (format, tone, and constraints).
+4. Tune one parameter per iteration (for example, only `temperature` first).
+5. Build, test with 3 to 5 prompts, then adjust.
+
+Recommended naming pattern:
+
+- `team-or-project/purpose`
+- examples: `dev/coder`, `support/triage-assistant`, `analytics/sql-helper`
+
+#### Common Modelfile Directives
+
+- `FROM`: base model/tag to build from.
+- `SYSTEM`: system instruction that defines behavior and style.
+- `PARAMETER temperature`: creativity level. Lower is more deterministic.
+- `PARAMETER top_p`: sampling control for output diversity.
+- `PARAMETER num_ctx`: context window size.
+- `PARAMETER stop`: one or more stop sequences.
+
+#### Starter Templates
+
+Coding assistant:
+
+```text
+FROM qwen2.5-coder:14b
+SYSTEM "You are a senior software engineer. Give concise, production-safe answers with clear tradeoffs."
+PARAMETER temperature 0.2
+PARAMETER top_p 0.9
+PARAMETER num_ctx 8192
+```
+
+Documentation writer:
+
+```text
+FROM llama3.2:3b-instruct-q4_K_M
+SYSTEM "You write accurate technical documentation with short sections and practical examples."
+PARAMETER temperature 0.4
+PARAMETER top_p 0.95
+PARAMETER num_ctx 8192
+```
+
+Strict JSON responder:
+
+```text
+FROM mistral:latest
+SYSTEM "Return valid JSON only. Never include markdown code fences."
+PARAMETER temperature 0.1
+PARAMETER stop "```"
+```
+
+#### API Workflow for Create
+
+Create from inline Modelfile:
+
+```bash
+curl -sS -X POST http://localhost:3090/api/models/create \
+   -H "Content-Type: application/json" \
+   -d '{
+      "name":"dev/coder",
+      "modelfile":"FROM qwen2.5-coder:14b\nSYSTEM \"You are a senior software engineer.\"\nPARAMETER temperature 0.2"
+   }'
+```
+
+Then inspect and validate:
+
+```bash
+curl -sS http://localhost:3090/api/models/dev%2Fcoder
+curl -sS "http://localhost:3090/api/models/dev%2Fcoder/history?limit=20"
+```
+
+#### Troubleshooting Custom Builds
+
+- Error: base model not found
+- Fix: pull the exact base tag in `FROM` first.
+
+- Error: build succeeds but output quality is poor
+- Fix: lower `temperature`, tighten `SYSTEM`, and add explicit output constraints.
+
+- Error: context-related truncation
+- Fix: increase `PARAMETER num_ctx` and test with shorter prompts first.
+
+- Error: model is too slow on CPU
+- Fix: use a smaller or more quantized base model tag.
+
+#### Safe Iteration Pattern
+
+1. Duplicate your current model under a new name.
+2. Change one directive.
+3. Rebuild and compare with the same prompt set.
+4. Keep a short changelog in model notes.
+
 ## TypeScript Workflow
 
 The project source lives in `src/` and `public/`, and production artifacts are emitted to `dist/`.
@@ -80,6 +217,26 @@ npm start
 ## Publish to npm
 
 The package is published as `@kdcllc/ollama-model-manager`.
+
+### Automated Publishing (Recommended)
+
+Pushes to the `master` branch automatically build and publish to npm via GitHub Actions. If you push code without manually bumping the version, the workflow auto-bumps the patch version before publishing. The version change is committed back to `master`, and the follow-up bot commit is skipped at the job level so the same version is not published twice.
+
+**Setup required:**
+1. Create an npm access token at <https://www.npmjs.com/settings/tokens> (Automation-type token recommended)
+2. Add it as a repository secret named `NPM_TOKEN` at `https://github.com/kdcllc/ollama-model-manager/settings/secrets/actions`
+3. Push to `master` or merge a PR to trigger automated publishing
+
+To manually control the version before pushing to `master`:
+
+```bash
+npm version patch    # or minor/major
+git push origin master
+```
+
+The workflow will detect the version change and publish without auto-bumping.
+
+### Manual Publishing
 
 For this package, a real publish typically means:
 
@@ -98,7 +255,7 @@ npm publish --dry-run
 
 If the dry run looks correct, bump the version and publish.
 
-### Authenticate to npm
+#### Authenticate to npm
 
 If you publish interactively from your machine:
 
@@ -120,11 +277,19 @@ npm whoami
 
 Because this package is already scoped and [package.json](./package.json) sets `publishConfig.access` to `public`, you do not need to pass `--access public` every time.
 
-### How to increment the version
+#### How to increment the version
 
 This project currently uses version `1.0.1` in [package.json](./package.json).
 
-Use semantic versioning:
+**For automated publishing:** You typically do not need to manually bump the version. If you push to `master` without changing the version, the publish workflow auto-bumps the patch version. To control the version type (minor/major), bump manually before pushing:
+
+```bash
+npm version minor     # For new features
+npm version major     # For breaking changes
+git push origin master
+```
+
+**For manual publishing:** Use semantic versioning:
 
 - `npm version patch` for bug fixes, documentation-only releases, and small non-breaking improvements. Example: `1.0.1` -> `1.0.2`.
 - `npm version minor` for new backward-compatible features. Example: `1.0.1` -> `1.1.0`.
@@ -239,15 +404,27 @@ The server reads the following environment variables from [src/config.ts](./src/
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `PORT` | `3090` | HTTP port for the UI and API server. |
-| `OLLAMA_BASE_URL` | `http://127.0.0.1:11434` | Base URL for the Ollama daemon. |
-| `MODEL_CATALOG_PATH` | `./data/model-catalog.json` | Curated baseline catalog metadata file. |
-| `USER_METADATA_PATH` | `./data/user-metadata.json` | User-edited model notes and overrides. |
+| `OLLAMA_BASE_URL` | `http://127.0.0.1:11434` | Explicit base URL for the Ollama daemon. When set, this always takes precedence. |
+| `OLLAMA_WSL_USE_WINDOWS_HOST` | `false` | In WSL, opt in to Windows host IP resolution (`true`) instead of localhost-first mode. |
+| `OLLAMA_MODEL_MANAGER_DATA_DIR` | `./data` | Base directory for runtime data files, resolved from the current working directory. |
+| `MODEL_CATALOG_PATH` | `<data-dir>/model-catalog.json` | Curated baseline catalog metadata file. |
+| `USER_METADATA_PATH` | `<data-dir>/user-metadata.json` | User-edited model notes and overrides. |
+| `MODEL_LIFECYCLE_PATH` | `<data-dir>/model-lifecycle.json` | Persisted lifecycle state for each model. |
+| `MODEL_HISTORY_PATH` | `<data-dir>/model-history.json` | Persisted lifecycle activity and audit-style events. |
 | `ALLOW_OLLAMA_UPDATE` | `true` | Enables the update endpoint and UI action unless set to `false`. |
 | `OLLAMA_UPDATE_COMMAND` | `curl -fsSL https://ollama.com/install.sh \| sh` | Command executed by the update endpoint. |
 | `OLLAMA_UPDATE_TIMEOUT_MS` | `600000` | Timeout for the update command in milliseconds. |
 | `SYSTEM_PROBE_TIMEOUT_MS` | `3000` | Timeout for system capability probes. |
 | `SYSTEM_PROBE_TTL_MS` | `30000` | Capability cache TTL in milliseconds. |
-| `OPTIMIZATION_CONFIG_PATH` | `./data/optimization-config.json` | Persisted optimization preferences and system profile. |
+| `OPTIMIZATION_CONFIG_PATH` | `<data-dir>/optimization-config.json` | Persisted optimization preferences and system profile. |
+
+Data files are machine-local runtime state and are created automatically at startup when absent. The catalog file is seeded with bundled defaults so model cards have baseline descriptions immediately.
+
+WSL behavior:
+
+- Default mode is localhost-first (`http://127.0.0.1:11434`) so Ollama running inside WSL works without extra configuration.
+- If Ollama runs on Windows host, set `OLLAMA_WSL_USE_WINDOWS_HOST=true` to try Windows host IP resolution.
+- Invalid/special host candidates like `10.255.255.x` are ignored and fall back to localhost.
 
 Example:
 
@@ -269,7 +446,11 @@ Model names used in route parameters should be URL-encoded. For example, `qwen2.
 
 - `GET /api/models`
 - `GET /api/models/:name`
+- `GET /api/models/:name/history`
+- `GET /api/models/history/all`
 - `POST /api/models/pull`
+- `POST /api/models/create`
+- `POST /api/models/batch-pull`
 - `DELETE /api/models/:name`
 - `PATCH /api/models/:name/notes`
 - `POST /api/models/:name/enrich`
@@ -292,6 +473,25 @@ Pull a model:
 curl -sS -X POST http://localhost:3090/api/models/pull \
    -H "Content-Type: application/json" \
    -d '{"name":"qwen2.5-coder:14b"}'
+```
+
+Create a custom model from Modelfile content:
+
+```bash
+curl -sS -X POST http://localhost:3090/api/models/create \
+   -H "Content-Type: application/json" \
+   -d '{
+      "name":"my-team/coding-assistant",
+      "modelfile":"FROM llama3.2:3b-instruct-q4_K_M\nSYSTEM \"You are a precise coding assistant.\"\nPARAMETER temperature 0.2"
+   }'
+```
+
+Batch pull models:
+
+```bash
+curl -sS -X POST http://localhost:3090/api/models/batch-pull \
+   -H "Content-Type: application/json" \
+   -d '{"names":["qwen2.5-coder:14b","mistral:latest"]}'
 ```
 
 Save notes for a model:
@@ -322,11 +522,25 @@ Delete a model:
 curl -sS -X DELETE http://localhost:3090/api/models/qwen2.5-coder%3A14b
 ```
 
+Get lifecycle history for a model:
+
+```bash
+curl -sS "http://localhost:3090/api/models/qwen2.5-coder%3A14b/history?limit=50"
+```
+
+Get global lifecycle activity:
+
+```bash
+curl -sS "http://localhost:3090/api/models/history/all?limit=100"
+```
+
 ### System Endpoints
 
 - `GET /api/system/health`
 - `GET /api/system/recommendations`
 - `GET /api/system/gpu-status`
+- `GET /api/system/running-models`
+- `GET /api/system/lifecycle-activity`
 - `GET /api/system/optimization-config`
 - `PATCH /api/system/optimization-config`
 - `POST /api/system/update-ollama`
@@ -342,6 +556,18 @@ Get recommendations:
 
 ```bash
 curl -sS http://localhost:3090/api/system/recommendations
+```
+
+Get running models currently loaded in Ollama:
+
+```bash
+curl -sS http://localhost:3090/api/system/running-models
+```
+
+Get lifecycle activity from the system API:
+
+```bash
+curl -sS "http://localhost:3090/api/system/lifecycle-activity?limit=100"
 ```
 
 Update optimization preferences:
@@ -417,6 +643,10 @@ Current behavior:
 - `data/model-catalog.json` stores curated baseline model descriptions and use cases.
 - `data/user-metadata.json` stores user notes, overrides, and fetched library metadata.
 - `data/optimization-config.json` stores user optimization preferences and the latest observed system profile.
+- `data/model-lifecycle.json` stores lifecycle state per model (for example pull or delete outcomes).
+- `data/model-history.json` stores activity history entries for lifecycle and metadata operations.
+
+Lifecycle state and history files are created automatically at startup if they are missing.
 
 ## Project Structure
 
@@ -456,6 +686,18 @@ If the UI says Ollama is offline:
     ```
 
 3. If Ollama is bound to a different host or port, set `OLLAMA_BASE_URL` before starting the server.
+
+### WSL (Windows Subsystem for Linux)
+
+When running inside WSL2 with Ollama installed on the **Windows host**, the app defaults to using `localhost` (`127.0.0.1`). To enable automatic Windows host IP resolution, set the `OLLAMA_WSL_USE_WINDOWS_HOST=true` environment variable before starting the server. When enabled, the app resolves the Windows host IP from `/etc/resolv.conf` or the default gateway and uses it as the Ollama base URL. A log message confirms the resolution method at startup.
+
+To opt in to Windows host IP auto-detection:
+
+```bash
+OLLAMA_WSL_USE_WINDOWS_HOST=true npm start
+```
+
+If you are using WSL2 with **mirrored networking** (Windows 11, `.wslconfig` `networkingMode=mirrored`), `localhost` already works transparently and no override is needed — the app detects this case and uses `127.0.0.1` as normal.
 
 If `npm start` exits immediately, rebuild first so `dist/src/server.js` exists:
 

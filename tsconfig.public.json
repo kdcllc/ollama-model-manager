@@ -10,6 +10,6 @@
     "skipLibCheck": true,
     "lib": ["ES2022", "DOM"]
   },
-  "include": ["public/app.ts"],
+  "include": ["public/app.ts", "public/sudoDialog.ts"],
   "exclude": ["node_modules", "dist"]
 }

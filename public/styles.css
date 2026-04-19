@@ -10,6 +10,8 @@
   --danger: #ff6b6b;
   --good: #3ddc97;
   --border: rgba(138, 172, 199, 0.25);
+  --focus-ring: #8fd9ff;
+  --focus-shadow: rgba(41, 182, 246, 0.35);
 }
 
 * {
@@ -99,6 +101,27 @@ body {
   align-items: center;
 }
 
+.stack-form {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.field-group {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.field-grow {
+  min-width: 260px;
+  flex: 1;
+}
+
+.field-label {
+  display: block;
+  font-size: 0.84rem;
+  color: var(--muted);
+}
+
 .pill {
   font-size: 0.85rem;
   border-radius: 999px;
@@ -168,9 +191,13 @@ textarea {
   font-family: "Space Grotesk", sans-serif;
 }
 
-.inline-form input {
-  min-width: 260px;
-  flex: 1;
+.inline-form > .field-group {
+  min-width: 220px;
+}
+
+.inline-form > .field-group input,
+.inline-form > .field-group select {
+  min-width: 0;
 }
 
 .models-toolbar {
@@ -190,17 +217,25 @@ textarea {
   display: flex;
   flex-wrap: wrap;
   gap: 0.55rem;
-  align-items: center;
+  align-items: flex-end;
 }
 
-.models-toolbar-main input {
-  min-width: 240px;
-  flex: 1;
-}
-
-.models-toolbar-main select {
-  width: auto;
+.toolbar-field {
   min-width: 170px;
+}
+
+.toolbar-field-search {
+  flex: 1;
+  min-width: 240px;
+}
+
+.toolbar-field-compact {
+  width: min(240px, 100%);
+}
+
+.view-toggle-group {
+  display: grid;
+  gap: 0.35rem;
 }
 
 .view-toggle {
@@ -267,6 +302,11 @@ textarea {
   background: rgba(11, 22, 34, 0.92);
   border-radius: 14px;
   padding: 0.9rem;
+}
+
+.card-interactive,
+.model-row-interactive {
+  cursor: pointer;
 }
 
 .card-selected {
@@ -397,6 +437,56 @@ textarea {
   white-space: pre-wrap;
 }
 
+.custom-model-guide {
+  margin-top: 0.85rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.custom-model-example-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+
+.custom-model-example {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.8rem;
+  background: rgba(17, 34, 50, 0.7);
+}
+
+.custom-model-example h3 {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+}
+
+.custom-model-code {
+  margin: 0.55rem 0 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #0f1d2c;
+  padding: 0.7rem;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.78rem;
+  color: #bfe7ff;
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
+
+.custom-model-checklist {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.custom-model-checklist code,
+.hint code {
+  font-family: "IBM Plex Mono", monospace;
+  color: #bfe7ff;
+}
+
 .gpu-panel {
   margin-top: 0.85rem;
   display: grid;
@@ -441,6 +531,10 @@ textarea {
 .details-grid {
   display: grid;
   gap: 0.75rem;
+}
+
+.details-panel {
+  scroll-margin-top: 1rem;
 }
 
   .model-info-block {
@@ -521,6 +615,32 @@ textarea {
   font-size: 0.8rem;
 }
 
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+.chip:focus-visible,
+.card-interactive:focus-visible,
+.model-row-interactive:focus-visible,
+a:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--focus-shadow);
+}
+
+.btn:focus-visible,
+.chip:focus-visible {
+  transform: translateY(-1px);
+}
+
+.btn:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+  cursor: not-allowed;
+}
+
 @keyframes drift {
   from {
     transform: translateY(0px) translateX(0px);
@@ -572,7 +692,7 @@ textarea {
     align-items: stretch;
   }
 
-  .models-toolbar-main select {
+  .toolbar-field-compact {
     width: 100%;
   }
 
@@ -589,3 +709,50 @@ textarea {
     align-items: stretch;
   }
 }
+
+  /* Sudo password modal */
+  .sudo-modal {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 2rem;
+    color: var(--text);
+    font-family: "Space Grotesk", sans-serif;
+    max-width: 420px;
+    width: 90vw;
+    backdrop-filter: blur(12px);
+  }
+
+  .sudo-modal::backdrop {
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(3px);
+  }
+
+  .sudo-modal h3 {
+    margin: 0 0 0.6rem;
+    font-size: 1.1rem;
+  }
+
+  .sudo-modal-hint {
+    color: var(--muted);
+    font-size: 0.88rem;
+    margin: 0 0 1.2rem;
+    line-height: 1.5;
+  }
+
+  .sudo-modal label {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-bottom: 0.35rem;
+  }
+
+  .sudo-modal input[type="password"] {
+    margin-bottom: 1.2rem;
+  }
+
+  .sudo-modal-actions {
+    display: flex;
+    gap: 0.6rem;
+    justify-content: flex-end;
+  }

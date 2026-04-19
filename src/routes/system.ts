@@ -1,6 +1,6 @@
 import type { Request, Response, Router } from "express";
 import type { AppConfig } from "../config";
-import type { MetadataStore } from "../services/metadataStore";
+import type { ModelLifecycleStore } from "../services/modelLifecycleStore";
 import type { OllamaClient } from "../services/ollamaClient";
 import type { OptimizationStore } from "../services/optimizationStore";
 import type { SystemProbe } from "../services/systemProbe";
@@ -13,7 +13,7 @@ import type {
 } from "../types";
 
 const express = require("express");
-const { runCommand } = require("../services/commandRunner");
+const { runCommand, runCommandWithSudoPassword } = require("../services/commandRunner");
 const { fetchLibraryData } = require("../services/libraryFetcher");
 
 interface SystemRouterDeps {
@@ -21,6 +21,7 @@ interface SystemRouterDeps {
   config: AppConfig;
   systemProbe: SystemProbe;
   optimizationStore: OptimizationStore;
+  lifecycleStore: ModelLifecycleStore;
 }
 
 interface RecommendationResponse {
@@ -36,7 +37,13 @@ interface RecommendationResponse {
   };
 }
 
-function createSystemRouter({ ollamaClient, config, systemProbe, optimizationStore }: SystemRouterDeps): Router {
+function createSystemRouter({
+  ollamaClient,
+  config,
+  systemProbe,
+  optimizationStore,
+  lifecycleStore
+}: SystemRouterDeps): Router {
   const router: Router = express.Router();
 
   router.get("/health", async (_req: Request, res: Response) => {
@@ -115,6 +122,25 @@ function createSystemRouter({ ollamaClient, config, systemProbe, optimizationSto
     }
   });
 
+  router.get("/running-models", async (_req: Request, res: Response) => {
+    try {
+      const models = await ollamaClient.listRunningModels();
+      res.json({ ok: true, models, count: models.length });
+    } catch (error: unknown) {
+      res.status(500).json({ error: getErrorMessage(error) });
+    }
+  });
+
+  router.get("/lifecycle-activity", async (req: Request, res: Response) => {
+    const limit = Number(req.query.limit || 100);
+    try {
+      const events = await lifecycleStore.listHistory({ limit });
+      res.json({ ok: true, events });
+    } catch (error: unknown) {
+      res.status(500).json({ error: getErrorMessage(error) });
+    }
+  });
+
   router.get("/optimization-config", async (_req: Request, res: Response) => {
     try {
       const configData = await optimizationStore.getConfig();
@@ -155,7 +181,22 @@ function createSystemRouter({ ollamaClient, config, systemProbe, optimizationSto
       return;
     }
 
-    const result = await runCommand(config.ollamaUpdateCommand, config.updateTimeoutMs);
+    const hasSudoPassword =
+      req.body != null &&
+      typeof req.body === "object" &&
+      Object.prototype.hasOwnProperty.call(req.body, "sudoPassword");
+
+    if (hasSudoPassword && typeof req.body.sudoPassword !== "string") {
+      res.status(400).json({
+        error: "Field sudoPassword must be a string when provided."
+      });
+      return;
+    }
+
+    const sudoPassword = hasSudoPassword ? req.body.sudoPassword.replace(/[\r\n]/g, "") : "";
+    const result = hasSudoPassword
+      ? await runCommandWithSudoPassword(config.ollamaUpdateCommand, sudoPassword, config.updateTimeoutMs)
+      : await runCommand(config.ollamaUpdateCommand, config.updateTimeoutMs);
     res.status(result.ok ? 200 : 500).json({
       ...result,
       command: config.ollamaUpdateCommand
