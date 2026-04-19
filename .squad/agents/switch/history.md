@@ -9,6 +9,19 @@
 
 - Team initialized with Switch as Tester.
 
+## 2026-04-19: Playwright MCP Configuration
+
+**Scribe Orchestration**: Tank added Playwright MCP server to `.copilot/mcp-config.json` (approved by Switch).
+
+Work completed:
+1. **MCP Integration**: Added `playwright` MCP entry using `npx @playwright/mcp@latest`
+2. **Config Preservation**: Maintained existing structure and GitHub server example
+3. **Quality Review**: Switch validated configuration structure and pattern compliance
+
+Status: ✅ Configuration complete. Playwright tooling now available for future UI review sessions.
+
+---
+
 ## 2026-04-19: Squad Orchestration Complete
 
 **Scribe Checkpoint**: Switch's quality gate successfully validated `.github/copilot-instructions.md`.

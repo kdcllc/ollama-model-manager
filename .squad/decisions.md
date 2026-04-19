@@ -2,6 +2,32 @@
 
 ## Active Decisions
 
+### 2. Add Playwright MCP Server to Repository Configuration (2026-04-19)
+
+**Status:** Adopted  
+**Owner:** Tank (Platform Dev)  
+**Timestamp:** 2026-04-19T12:40:36Z  
+**Reviewer:** Switch (Tester)
+
+**Decision:** Added Playwright MCP server entry to `.copilot/mcp-config.json`.
+
+**Rationale:** Enable Playwright UI automation tooling for future Copilot sessions conducting browser-based review and testing.
+
+**Implementation:**
+- Added repo-level `playwright` MCP server entry
+- Used `npx @playwright/mcp@latest` for flexibility in future version updates
+- Preserved existing config structure and GitHub server example entry
+
+**Impact:**
+- Future UI review sessions can enable Playwright MCP without additional setup
+- Config is checked in and managed by the team
+- Extensible for additional MCP servers
+
+**Review:**
+- Switch approved configuration structure and pattern compliance (2026-04-19T12:42:19Z)
+
+---
+
 ### 1. Copilot Instructions for Future Sessions (2026-04-19)
 
 **Status:** Adopted  
