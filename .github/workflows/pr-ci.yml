@@ -1,0 +1,41 @@
+name: PR CI
+
+on:
+  pull_request:
+    branches: [master]
+    paths-ignore:
+      - '.squad/**'
+      - '**/*.md'
+      - '.github/workflows/squad-*.yml'
+      - '.github/workflows/sync-squad-labels.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Type check
+        run: npm run typecheck
+      
+      - name: Build
+        run: npm run build
+      
+      - name: Verify CLI entrypoint exists
+        run: |
+          if [ ! -f dist/src/server.js ]; then
+            echo "Error: dist/src/server.js not found after build"
+            exit 1
+          fi
+          echo "✓ CLI entrypoint verified"

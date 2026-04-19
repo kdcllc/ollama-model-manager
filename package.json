@@ -1,6 +1,6 @@
 {
   "name": "@kdcllc/ollama-model-manager",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "CLI and web UI for managing local Ollama models with hardware-aware recommendations and optimization guidance",
   "license": "MIT",
   "repository": {

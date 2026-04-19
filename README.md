@@ -218,6 +218,26 @@ npm start
 
 The package is published as `@kdcllc/ollama-model-manager`.
 
+### Automated Publishing (Recommended)
+
+Pushes to the `master` branch automatically build and publish to npm via GitHub Actions. If you push code without manually bumping the version, the workflow auto-bumps the patch version before publishing. The version change is committed back to `master`, and the follow-up bot commit is skipped at the job level so the same version is not published twice.
+
+**Setup required:**
+1. Create an npm access token at <https://www.npmjs.com/settings/tokens> (Automation-type token recommended)
+2. Add it as a repository secret named `NPM_TOKEN` at `https://github.com/kdcllc/ollama-model-manager/settings/secrets/actions`
+3. Push to `master` or merge a PR to trigger automated publishing
+
+To manually control the version before pushing to `master`:
+
+```bash
+npm version patch    # or minor/major
+git push origin master
+```
+
+The workflow will detect the version change and publish without auto-bumping.
+
+### Manual Publishing
+
 For this package, a real publish typically means:
 
 1. Make sure you are logged into the correct npm account.
@@ -235,7 +255,7 @@ npm publish --dry-run
 
 If the dry run looks correct, bump the version and publish.
 
-### Authenticate to npm
+#### Authenticate to npm
 
 If you publish interactively from your machine:
 
@@ -257,11 +277,19 @@ npm whoami
 
 Because this package is already scoped and [package.json](./package.json) sets `publishConfig.access` to `public`, you do not need to pass `--access public` every time.
 
-### How to increment the version
+#### How to increment the version
 
 This project currently uses version `1.0.1` in [package.json](./package.json).
 
-Use semantic versioning:
+**For automated publishing:** You typically do not need to manually bump the version. If you push to `master` without changing the version, the publish workflow auto-bumps the patch version. To control the version type (minor/major), bump manually before pushing:
+
+```bash
+npm version minor     # For new features
+npm version major     # For breaking changes
+git push origin master
+```
+
+**For manual publishing:** Use semantic versioning:
 
 - `npm version patch` for bug fixes, documentation-only releases, and small non-breaking improvements. Example: `1.0.1` -> `1.0.2`.
 - `npm version minor` for new backward-compatible features. Example: `1.0.1` -> `1.1.0`.

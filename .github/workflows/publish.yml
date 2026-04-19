@@ -1,0 +1,81 @@
+name: Publish to npm
+
+on:
+  push:
+    branches: [master]
+    paths-ignore:
+      - '.squad/**'
+      - '.github/workflows/squad-*.yml'
+      - '.github/workflows/sync-squad-labels.yml'
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.actor != 'github-actions[bot]' && !contains(github.event.head_commit.message, '[skip ci]')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          registry-url: 'https://registry.npmjs.org'
+      
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Check for version bump
+        id: version_check
+        run: |
+          # Get current package.json version
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          
+          # Get previous commit's package.json version (if exists)
+          PREV_VERSION=$(git show HEAD~1:package.json 2>/dev/null | node -p "JSON.parse(require('fs').readFileSync('/dev/stdin', 'utf-8')).version" || echo "0.0.0")
+          
+          echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "prev_version=$PREV_VERSION" >> $GITHUB_OUTPUT
+          
+          if [ "$CURRENT_VERSION" = "$PREV_VERSION" ]; then
+            echo "needs_bump=true" >> $GITHUB_OUTPUT
+            echo "Version unchanged ($CURRENT_VERSION), will auto-bump patch"
+          else
+            echo "needs_bump=false" >> $GITHUB_OUTPUT
+            echo "Version bumped: $PREV_VERSION → $CURRENT_VERSION"
+          fi
+      
+      - name: Auto-bump patch version
+        if: steps.version_check.outputs.needs_bump == 'true'
+        run: |
+          npm version patch --no-git-tag-version
+          NEW_VERSION=$(node -p "require('./package.json').version")
+          echo "Auto-bumped version to $NEW_VERSION"
+          
+          git add package.json package-lock.json
+          git commit -m "chore: bump version to $NEW_VERSION [skip ci]"
+          git push origin HEAD:master
+      
+      - name: Build package
+        run: npm run build
+      
+      - name: Publish to npm
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
