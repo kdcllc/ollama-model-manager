@@ -8,3 +8,31 @@
 ## Learnings
 
 - Team initialized with Tank as Platform Dev.
+
+## 2026-04-19: Copilot Instructions Analysis
+
+Analyzed repository for build, test, lint, typecheck, dev, start, and packaging commands to inform `.github/copilot-instructions.md`.
+
+### Findings
+- **Build**: 2x TypeScript compiles (server + browser UI) + manual asset copy; always cleans first
+- **Typecheck**: Server only; public UI not checked separately
+- **Dev**: nodemon watches src/ and public/, hot rebuild
+- **Start**: Requires pre-built `dist/src/server.js`
+- **Publish**: Scoped public npm package; prepublishOnly hook auto-runs typecheck + build
+- **npx entry**: `bin/ollama-model-manager` → requires dist/ to exist (explicit error if missing)
+- **Test/Lint**: Not configured; typecheck + manual testing only
+- **TypeScript**: Dual-project architecture (tsconfig.json + tsconfig.public.json); independent outputs
+
+### Platform Considerations
+- Dual TypeScript configs require maintainers to update both for compiler changes
+- Asset copying is manual (HTML, CSS); must exist in `public/` to be included
+- No prebuild hook; users must run `npm run build` before first `npm start`
+- Package files list is explicit (dist, bin, README, LICENSE); no auto-discovery
+- WSL auto-detects Windows host for Ollama; documented in README
+- Error messages from bin script are clear when dist/ is missing
+
+### Learnings for Future Work
+- Build is repeatable and deterministic (no hidden setup surprises)
+- README.md already comprehensive on quick start, config, API, publish flow, troubleshooting
+- Consider adding test framework (Jest/Vitest) and linter (ESLint) for CI gates if team adopts
+- Runtime path contract (bin → dist/src/server.js) is explicit and testable
