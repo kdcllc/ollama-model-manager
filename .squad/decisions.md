@@ -2,6 +2,44 @@
 
 ## Active Decisions
 
+### 9. Copilot Directive: Playwright MCP Artifact Storage (2026-04-19)
+
+**Status:** Approved  
+**By:** kdcllc (via Copilot)  
+**Timestamp:** 2026-04-19T19:45:40Z
+
+**Decision:** Playwright MCP snapshot files must be stored in a dedicated directory and not in the repository root.
+
+**Rationale:** User request — ensure test artifacts are organized and separate from project files.
+
+**Impact:** Future Playwright sessions will store snapshots in a designated directory, keeping the repo root clean.
+
+---
+
+### 8. Custom Model Examples Belong in the Create Form (2026-04-19)
+
+**Status:** Approved  
+**Reviewers:** Trinity (Designer), Switch (Tester)  
+**Timestamp:** 2026-04-19T19:54:03Z
+
+**Summary:** Trinity added three copy-ready example Modelfile snippets directly to the Create Custom Model form input placeholder. Switch reviewed and returned **APPROVE WITH OBSERVATION**.
+
+**Decision:** Keep examples in the Create form (point-of-use guidance) rather than moving to separate docs-first workflow.
+
+**Rationale:** First-time users need concrete, role-oriented starters exactly where they name the model and paste the Modelfile. Point-of-use guidance has the highest usability value. Manual copy/paste is acceptable for v1; a "copy-to-input" affordance can be added later without blocking release.
+
+**Implementation:**
+- Updated `public/index.html` form placeholder with three examples: coding helper, support triage, strict JSON
+- Updated `public/app.ts` form submission logic
+- Added inline safe-iteration checklist
+- All validation passed: npm run typecheck ✓, npm run build ✓
+
+**Observation (Non-Blocking):** Switch noted that examples require manual copy/paste and could later benefit from a direct copy-to-input button. Acceptable for v1.
+
+**Related Decision:** Trinity's changes address part of Switch's Test Analysis (Decision #8, later renumbered).
+
+---
+
 ### 7. UX Implementation Complete: Trinity Fixes + Switch Re-Approval (2026-04-19)
 
 **Status:** Approved  

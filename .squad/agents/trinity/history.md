@@ -15,6 +15,21 @@
 - **Vanilla DOM works here:** No framework overhead. Event listeners are explicit. State object is central. Re-render functions (e.g., `updateModelsDisplay()`, `renderRecommendations()`) are clear entry points for UI changes.
 - **File structure:** `public/index.html` (templates + structure), `public/styles.css` (layout + theming + responsive), `public/app.ts` (1217 lines; split by section: event wiring, refresh loops, renders, helpers). Styled cleanly with CSS Grid, no component abstraction layer needed yet.
 - **Live UX verdict (2026-04-19):** Based on the running app with 24 visible models and the captured scroll/focus behavior, the current UX should not be approved yet. The single-page stack is still the right structure, but the page makes users scan through four operations-heavy panels before reaching Installed Models, and opening Details scrolls deep without moving focus, which breaks orientation. Tabs would not materially improve this because model discovery, detail review, and activity are one coupled workflow; the right fix is to promote Installed Models + Model Details higher, then add intentional in-page navigation and focus handling.
+- **Custom model guidance (2026-04-19):** The best place for Modelfile examples is directly under the Create Custom Model form, not buried in docs. A few short copy-ready snippets plus three concrete heuristics (start from a pulled base, change one parameter at a time, keep each variation under a new name) make the workflow clearer without adding new UI mechanics.
+
+## 2026-04-19: Custom Model Examples — Decision #8 Approved
+
+**Scribe Checkpoint**: Trinity implemented custom model examples in the Create Custom Model form; Switch reviewed and returned APPROVE WITH OBSERVATION.
+
+Work completed:
+1. **UI Enhancement**: Added three copy-ready Modelfile examples (coding helper, support triage, strict JSON) to the Create form placeholder
+2. **Guidance**: Added inline safe-iteration checklist to help first-time users avoid common mistakes
+3. **Validation**: npm run typecheck ✓, npm run build ✓, live app verification ✓
+4. **Review**: Switch approved with non-blocking observation: manual copy/paste is acceptable for v1; could add direct copy-to-input affordance in v2
+
+Status: ✅ Shipped as-is. Decision #8 captured in decisions.md. No blockers remain for this work cycle.
+
+---
 
 ## 2026-04-19: Live UX Gate — Trinity's Hierarchy Review Confirmed
 

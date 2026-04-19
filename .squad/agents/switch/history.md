@@ -14,6 +14,20 @@
 - **UX Re-review Outcome (2026-04-19):** Reordered sections, explicit labels, `:focus-visible`, details focus placement, and keyboard activation now hold up in the live app. New layout puts Installed Models at ~411px and Model Details at ~618px on a 1600px viewport; opening details focuses `#detailsHeading`, and delete fallback currently lands on search when the original trigger disappears. This clears the prior blockers, but deletion return focus is still a minor polish risk rather than a gate.
 - **UX Implementation Complete (2026-04-19):** Trinity implemented all five fixes from Decision #6. Switch re-review returned APPROVE WITH FOLLOW-UP verdict. All WCAG 2.1 Level A violations resolved. Code merged; typecheck and build pass. Minor follow-up: focus restoration after deletion could prefer next surviving model action (v2 refinement, non-blocking).
 
+## 2026-04-19: Custom Model Examples — Decision #8 Approved
+
+**Scribe Checkpoint**: Switch reviewed Trinity's custom model examples PR and returned APPROVE WITH OBSERVATION.
+
+Work completed:
+1. **Code Review**: Verified Trinity's three Modelfile examples (coding helper, support triage, strict JSON) are diverse and actionable
+2. **UX Validation**: Confirmed examples are accessible via form labels, no focus-management regressions
+3. **Quality Gate**: Confirmed npm run typecheck ✓, npm run build ✓
+4. **Observation**: Manual copy/paste is acceptable for v1; future "copy-to-input" affordance would enhance usability but is non-blocking
+
+Status: ✅ Approved. Decision #8 captured in decisions.md. Ready for release.
+
+---
+
 ## 2026-04-19: Playwright MCP Configuration
 
 **Scribe Orchestration**: Tank added Playwright MCP server to `.copilot/mcp-config.json` (approved by Switch).
