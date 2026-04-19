@@ -36,3 +36,16 @@ Analyzed repository for build, test, lint, typecheck, dev, start, and packaging 
 - README.md already comprehensive on quick start, config, API, publish flow, troubleshooting
 - Consider adding test framework (Jest/Vitest) and linter (ESLint) for CI gates if team adopts
 - Runtime path contract (bin → dist/src/server.js) is explicit and testable
+
+## 2026-04-19: Squad Orchestration Complete
+
+**Scribe Checkpoint**: Tank's platform analysis successfully integrated into `.github/copilot-instructions.md` (approved by Switch).
+
+Key contributions incorporated:
+- Build command documentation (clean → compile server → compile UI → copy assets)
+- Dual TypeScript architecture explanation
+- npx runtime path validation
+- No test/lint framework acknowledgment
+- Publishing workflow safety checks
+
+Status: ✅ Delivery complete. Ready for future Copilot sessions.

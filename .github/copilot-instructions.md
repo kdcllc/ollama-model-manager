@@ -73,7 +73,7 @@ Express server exports `startServer()` (called by `bin/ollama-model-manager`). T
 
 ### Data Persistence Layer
 
-Four JSON data stores, all in `data/` (or custom `OLLAMA_MODEL_MANAGER_DATA_DIR`):
+Five JSON data stores, all in `data/` (or custom `OLLAMA_MODEL_MANAGER_DATA_DIR`):
 
 1. **model-catalog.json** — Baseline model metadata (bundled defaults, user-editable)
 2. **user-metadata.json** — User notes, overrides, enriched library data
@@ -83,8 +83,7 @@ Four JSON data stores, all in `data/` (or custom `OLLAMA_MODEL_MANAGER_DATA_DIR`
 
 All are created automatically if missing. Access via store modules:
 - `src/services/metadataStore.ts` — User notes + enriched metadata
-- `src/services/modelLifecycleStore.ts` — Lifecycle state + auto-creation
-- Lifecycle history is embedded within lifecycle state; global history via `src/routes/system.ts`
+- `src/services/modelLifecycleStore.ts` — Lifecycle state (model-lifecycle.json) and history (model-history.json); both accessed separately
 - `src/services/optimizationStore.ts` — Optimization preferences
 
 ### Routes and API Contract
@@ -164,8 +163,8 @@ Central TypeScript interface definitions for models, lifecycle state, recommenda
 
 Model lifecycle state tracks: `unknown | pulling | building | ready | failed | deleting`.
 
-1. Update via `src/services/modelLifecycleStore.ts`
-2. Append entry to history (same file)
+1. Update state via `src/services/modelLifecycleStore.ts` → `setState()`
+2. Record events via `src/services/modelLifecycleStore.ts` → `recordEvent()` (stored in model-history.json)
 3. Return state + history in API responses
 4. UI polls lifecycle history to show activity
 
@@ -191,7 +190,7 @@ All configuration is **environment-variable only**. No config files. Defaults ar
 
 **WSL Auto-Detection:** WSL is detected via `/proc/version`. If detected and no `OLLAMA_BASE_URL` is set, the app tries to resolve Windows host IP from `/etc/resolv.conf`. This behavior is logged at startup; users can override with `OLLAMA_BASE_URL=http://127.0.0.1:11434` to use WSL-local Ollama.
 
-**Data File Auto-Creation:** All four JSON stores (catalog, metadata, lifecycle, history, optimization) are created automatically on first run if missing. The catalog is seeded with bundled defaults so users see model descriptions immediately.
+**Data File Auto-Creation:** All five JSON stores (catalog, user-metadata, lifecycle-state, lifecycle-history, optimization) are created automatically on first run if missing. The catalog is seeded with bundled defaults so users see model descriptions immediately.
 
 **Immutable History:** The lifecycle history is append-only. Never mutate or delete history entries. This ensures audit trail integrity.
 

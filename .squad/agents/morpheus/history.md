@@ -17,3 +17,15 @@
 - Lifecycle history is append-only audit log; never mutate history entries.
 - Model names in URLs must be URL-encoded (colons become `%3A`).
 - All configuration is environment-variable driven; no config files.
+
+## 2026-04-19: Squad Orchestration Complete
+
+**Scribe Checkpoint**: Morpheus-authored `.github/copilot-instructions.md` approved by Switch (post-revision).
+
+Work completed:
+1. Authored initial draft from Tank and Neo analysis
+2. Received rejection feedback from Switch (Round 1)
+3. Coordinated with Neo for persistence-layer corrections
+4. Received approval from Switch (Round 2)
+
+Status: ✅ Delivery complete. File approved and ready for future Copilot sessions.
