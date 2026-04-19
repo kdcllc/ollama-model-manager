@@ -2,6 +2,51 @@
 
 ## Active Decisions
 
+### 5. Morpheus Decision: Keep Single-Page Structure, No Tabs (2026-04-19)
+
+**Status:** Adopted  
+**Owner:** Morpheus (Lead)  
+**Timestamp:** 2026-04-19T19:00:00Z
+
+**Decision:** Do not introduce top-level tabs for the UI. Keep the single-page structure and address usability by tightening section hierarchy and keyboard affordances inside the existing page.
+
+**Rationale:** Primary workflows are tightly coupled (find model → inspect → update/delete → review activity). Tabs would split these steps across hidden surfaces and add focus-management complexity without solving the core issue. The real problem is hierarchy: system tuning and GPU monitoring are misplaced ahead of day-to-day model management.
+
+**Required Follow-Up Actions:**
+1. Re-rank sections so Installed Models and Model Details are more prominent in page flow
+2. Add better in-page navigation and labeling for keyboard users
+3. Consider a desktop two-pane treatment for list/details before reconsidering tabs
+
+---
+
+### 4. UX Accessibility Review: Approval Blocked by WCAG Violations (2026-04-19)
+
+**Status:** REJECTED — Blocker  
+**Reviewer:** Switch (Tester)  
+**Timestamp:** 2026-04-19T19:00:00Z
+
+**Summary:** UI has excellent visual polish but critical accessibility gaps block approval for public use:
+- No keyboard focus indicators
+- ~95% missing ARIA labels
+- No focus management when details panel opens
+- Incomplete form semantics (no `<label>` associations)
+- Minimal keyboard shortcuts (only "/" for search)
+
+**Severity:** WCAG 2.1 Level A violations. Keyboard-only and screen-reader users cannot complete primary workflows (pull model, delete model, view details).
+
+**Quick Wins (5 fixes, ~90 minutes):**
+1. Add `:focus-visible` CSS rules to all buttons and inputs
+2. Add `aria-label` to buttons without visible text
+3. Move focus into details panel when it opens
+4. Add `<label>` elements to form fields
+5. Add `keydown` handlers to model card actions (Enter/Space support)
+
+**Evidence:** Full audit at `.squad/agents/switch/audit-ux-2026-04-19.md` (25KB with code evidence and test scenarios).
+
+**Follow-On:** After fixes, Switch verifies keyboard + screen reader workflows. Playwright MCP (in `.copilot/mcp-config.json`) is available for regression testing.
+
+---
+
 ### 3. MCP Config Review Follow-Up — Non-Interactive npx Flag (2026-04-19)
 
 **Status:** Proposed  

@@ -8,6 +8,8 @@
 ## Learnings
 
 - Team initialized with Switch as Tester.
+- **UX Accessibility Audit (2026-04-19):** Vanilla DOM UI (no framework) is inherently accessible if patterns are followed. Current implementation skips critical patterns: focus indicators, ARIA labels, focus management. Keyboard-only and screen reader users cannot use UI effectively. Visual polish masks accessibility debt. **Fixable in ~90 min with high ROI.** Tabbed layout recommended as Phase 2 for cognitive load reduction.
+- **UX Review Verdict (2026-04-19):** Accessibility blockers identified and documented as Decision #4 (REJECTED — Blocker). Five quick wins identified (~90 min implementation). Full audit with code evidence in `audit-ux-2026-04-19.md` (25KB). Tabbed layout is not a blocking issue for basic accessibility compliance.
 
 ## 2026-04-19: Playwright MCP Configuration
 
