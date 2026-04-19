@@ -68,3 +68,32 @@ Evidence collected:
 **Next**: Implement 5 fixes (~110 min total); Switch re-verifies keyboard + screen-reader workflows.
 
 ---
+
+## 2026-04-19: CI/Release Workflow Review — APPROVED
+
+**Scribe Checkpoint**: Switch reviewed Tank's two GitHub Actions workflows (PR CI + Publish) and returned **APPROVE**.
+
+### Edge Cases Verified:
+1. **No test script** — Both workflows correctly omit `npm test`. Only `typecheck` + `build` run, matching project reality.
+2. **Branch trigger** — `[master, main]` covers the repo's default branch (`master`). Verified via `git branch -a`.
+3. **Recursive loop protection** — Two-layer guard: (a) `GITHUB_TOKEN` pushes don't trigger new workflows (GitHub documented behavior), (b) `[skip ci]` in auto-bump commit message.
+4. **Permissions** — `contents: write` in publish job allows commit push-back. Correct.
+5. **package-lock.json persistence** — `npm version patch --no-git-tag-version` updates both files (npm 7+). Both are `git add`ed and committed.
+6. **README alignment** — Automated publishing section accurately describes workflow, `NPM_TOKEN` secret, and manual version override.
+7. **paths-ignore** — `.squad/**`, `**.md`, squad workflows correctly excluded.
+8. **prepublishOnly redundancy** — `npm publish` re-runs typecheck+build via hook. Harmless.
+
+### Observations (Non-Blocking):
+- No concurrency control on publish workflow — simultaneous pushes could race. Low risk at project scale.
+- Future improvement: git tags for published versions (Tank already noted).
+
+### Validation:
+- `npm run typecheck`: ✅ Pass
+- `npm run build`: ✅ Pass
+- `dist/src/server.js` exists: ✅ Verified
+- Workflow YAML syntax: ✅ Valid
+- README CI documentation: ✅ Accurate
+
+Status: ✅ Approved.
+
+---

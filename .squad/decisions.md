@@ -2,6 +2,71 @@
 
 ## Active Decisions
 
+### 10. CI and Release Workflows for Automated Publishing (2026-04-19)
+
+**Status:** Approved  
+**Owner:** Tank (Platform Dev)  
+**Reviewer:** Switch (Tester)  
+**Timestamp:** 2026-04-19T20:08:32Z
+
+**Decision:** Implement GitHub Actions CI and npm publishing automation via two workflows.
+
+**Summary:** Tank added two GitHub Actions workflows to automate PR validation and npm publishing. Previously, publishing was entirely manual. Switch reviewed and returned **APPROVE WITH THREE NON-BLOCKING OBSERVATIONS**.
+
+**Workflows:**
+
+1. **PR CI** (`.github/workflows/pr-ci.yml`)
+   - Runs on all pull requests to master/main
+   - Installs dependencies, runs `npm run typecheck`, runs `npm run build`
+   - Verifies CLI entrypoint `dist/src/server.js` exists after build
+   - Skips Squad automation and markdown-only changes
+   - Purpose: Catch build/type errors before merge
+
+2. **Publish to npm** (`.github/workflows/publish.yml`)
+   - Runs on push/merge to master/main
+   - Checks if package version changed in this push
+   - If version unchanged, auto-bumps patch version and commits back to master with `[skip ci]`
+   - Runs `npm run build` and publishes to npm using `NPM_TOKEN` secret
+   - Dual recursion protection: GITHUB_TOKEN behavior + `[skip ci]` commits
+   - Purpose: Automate publishing on master merges; allow developers to control version (minor/major) by bumping before push
+
+**README Updates:**
+- Documented automated publishing workflow (recommended path)
+- Explained auto-bump behavior (patch if no version change detected)
+- Described manual version control for minor/major changes
+- Kept manual publishing instructions for local dev workflow
+- Documented NPM_TOKEN setup requirement
+
+**Validation:**
+- `npm run typecheck`: ✓ Pass
+- `npm run build`: ✓ Pass
+- `dist/src/server.js` verification: ✓ Exists
+
+**Rationale:**
+- Auto-bump patch prevents failed publishes when developers forget to bump; most changes are fixes/improvements (patches)
+- Developers explicitly bump for features (minor) or breaking changes (major)
+- `[skip ci]` prevents version-bump commit from retriggering publish workflow infinitely
+- Split workflows: PR validates early (faster feedback); publish only runs on successful master merge (reduces npm noise from feature branches)
+
+**Non-Blocking Observations (Switch):**
+
+1. **Redundant hook execution:** `prepublishOnly` hook causes typecheck + build during `npm publish`. Harmless but could be noted.
+2. **Concurrency:** No concurrency control for simultaneous master pushes. Acceptable at this project's scale.
+3. **Git tags:** Not created for published versions. Tank noted as future work.
+
+**Future Considerations:**
+- Add git tags for published versions
+- Consider requiring PR workflow success before merge (branch protection rule)
+- Add workflow to create GitHub releases from published versions
+- Consider version detection from git tags instead of package.json diff
+
+**Files Changed:**
+- `.github/workflows/pr-ci.yml` (new)
+- `.github/workflows/publish.yml` (new)
+- `README.md` (updated "Publish to npm" and related sections)
+
+---
+
 ### 9. Copilot Directive: Playwright MCP Artifact Storage (2026-04-19)
 
 **Status:** Approved  
