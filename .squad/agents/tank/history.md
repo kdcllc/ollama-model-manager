@@ -76,3 +76,13 @@ Key contributions incorporated:
 - Publishing workflow safety checks
 
 Status: ✅ Delivery complete. Ready for future Copilot sessions.
+
+## 2026-04-19: Live UX Gate — MCP Remains On Track
+
+**Scribe Checkpoint**: Live app review conducted on http://127.0.0.1:3090 with Tank confirming live Ollama data and 24 visible models. Review confirmed app was running with actual Ollama connection.
+
+Findings: Trinity + Switch converged on no-tabs decision and merged Decision #4 + #5 into Decision #6 (Live UX Gate). Playwright MCP configuration remains active for future regression testing.
+
+**Next**: Tank awaits decision on Morpheus MCP config revision (adding `-y` flag for non-interactive npx). Revision is low-priority; Playwright remains available and functional.
+
+---

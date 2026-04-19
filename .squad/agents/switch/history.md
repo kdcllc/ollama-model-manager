@@ -10,6 +10,7 @@
 - Team initialized with Switch as Tester.
 - **UX Accessibility Audit (2026-04-19):** Vanilla DOM UI (no framework) is inherently accessible if patterns are followed. Current implementation skips critical patterns: focus indicators, ARIA labels, focus management. Keyboard-only and screen reader users cannot use UI effectively. Visual polish masks accessibility debt. **Fixable in ~90 min with high ROI.** Tabbed layout recommended as Phase 2 for cognitive load reduction.
 - **UX Review Verdict (2026-04-19):** Accessibility blockers identified and documented as Decision #4 (REJECTED — Blocker). Five quick wins identified (~90 min implementation). Full audit with code evidence in `audit-ux-2026-04-19.md` (25KB). Tabbed layout is not a blocking issue for basic accessibility compliance.
+- **Live UX Evidence (2026-04-19):** Running app confirms the blocker is not "missing tabs" but broken interaction guarantees in the current page. Installed Models starts ~1851px down and Model Details ~4707px down; clicking a Details button scrolls there but leaves focus on `BODY`, so context changes without focus management. Top-level pull/create/search controls still rely on placeholders or unlabeled selects, while focus styling remains browser-default only.
 
 ## 2026-04-19: Playwright MCP Configuration
 
@@ -33,3 +34,21 @@ Work completed:
 2. **Round 2 Review**: Verified Neo's corrections; approved for delivery
 
 Status: ✅ Quality gate passed. File approved and ready for future Copilot sessions.
+
+## 2026-04-19: Live UX Gate — Switch's WCAG Audit Confirmed
+
+**Scribe Checkpoint**: Live app review conducted on http://127.0.0.1:3090 with Tank confirming live Ollama data and 24 visible models.
+
+Evidence collected:
+1. **Keyboard path**: Initial Tab sequence reaches System Profile, GPU Monitor, and authoring controls before Install, Create, Search, or model management—pushing primary workflow too deep.
+2. **Details panel focus**: Clicking Details button scrolls page to panel (~4707px down), but focus remains on `BODY`. Browser's default Tab recovery lands in first details input, but user has lost explicit focus context mid-page.
+3. **Labeling**: Pull/create/search inputs and optimization selects lack associated labels; UI still depends on placeholders and implied context.
+4. **Focus styling**: Browser-default outline only; no intentional `:focus-visible` system.
+
+**Consensus**: Trinity + Switch agreed: single-page structure is correct; tabs would not solve the real issue. Approval blocked by accessibility and hierarchy fixes, not architecture.
+
+**Merged Decision**: Decision #6 consolidates Trinity's hierarchy findings with Switch's WCAG violations into one gated decision with clear fix list and effort estimates.
+
+**Next**: Implement 5 fixes (~110 min total); Switch re-verifies keyboard + screen-reader workflows.
+
+---

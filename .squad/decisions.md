@@ -2,6 +2,39 @@
 
 ## Active Decisions
 
+### 6. Live UX Review: Trinity + Switch Joint Findings (2026-04-19)
+
+**Status:** DECISION GATE — Approval Blocked  
+**Reviewers:** Trinity (Designer) + Switch (Tester)  
+**Timestamp:** 2026-04-19T19:00:00Z
+
+**Summary:** Live app review (http://127.0.0.1:3090 with actual Ollama data) confirmed single-page architecture is correct, but approval is blocked by accessibility and hierarchy issues, not missing tabs.
+
+**Key Findings:**
+
+1. **Hierarchy Problem:** Installed Models begins ~1851px down; Model Details begins ~4707px down. System tuning and GPU controls appear first, pushing the primary workflow too deep. 
+2. **Focus Management:** Clicking Details button scrolls to panel but leaves focus on `BODY`, causing disorientation. No intentional focus movement or return path defined.
+3. **Labeling Gaps:** Pull/create/search inputs and optimization selects lack associated labels; UI still depends on placeholders or implied context.
+4. **Focus Styling:** Default browser outline used instead of intentional `:focus-visible` system.
+
+**Consensus Decision:**
+- **Keep single-page structure.** Tabs would hide broken semantics behind another navigation layer without fixing the root issues.
+- **Do not approve in current state.** Fix hierarchy, labeling, and focus management first.
+
+**Required Fixes Before Re-Review:**
+
+| Fix | Owner | Effort |
+|-----|-------|--------|
+| Add explicit `<label>` elements to all top-level form controls | Designer | ~30 min |
+| Add `:focus-visible` CSS to buttons, inputs, and card actions | Designer | ~20 min |
+| Implement focus management: move focus into details panel on open; define return path on close | Developer | ~30 min |
+| Re-rank page: move Installed Models + Model Details after hero area; collapsible sections below | Designer | ~20 min |
+| Add `keydown` support (Enter/Space) for model card actions | Developer | ~10 min |
+
+**Follow-On:** Switch verifies keyboard + screen-reader workflows after fixes. Full audit evidence in `.squad/agents/switch/audit-ux-2026-04-19.md` (25KB, includes WCAG 2.1 A violations detail).
+
+---
+
 ### 5. Morpheus Decision: Keep Single-Page Structure, No Tabs (2026-04-19)
 
 **Status:** Adopted  

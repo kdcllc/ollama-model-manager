@@ -11,5 +11,6 @@ When deciding between a single-page stack and tabs, evaluate the workflow in thi
 
 ## Applied here
 
+- If an item selection scrolls to another section, move keyboard focus with it or keep list/details adjacent; smooth scroll without focus transfer increases orientation cost.
 - Installed Models, Model Details, and Activity are one workflow, so separating them into tabs would increase navigation cost.
 - The better fix is to keep a single page and improve section order, labels, and in-page movement.
