@@ -10,6 +10,8 @@
   --danger: #ff6b6b;
   --good: #3ddc97;
   --border: rgba(138, 172, 199, 0.25);
+  --focus-ring: #8fd9ff;
+  --focus-shadow: rgba(41, 182, 246, 0.35);
 }
 
 * {
@@ -104,6 +106,22 @@ body {
   gap: 0.6rem;
 }
 
+.field-group {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.field-grow {
+  min-width: 260px;
+  flex: 1;
+}
+
+.field-label {
+  display: block;
+  font-size: 0.84rem;
+  color: var(--muted);
+}
+
 .pill {
   font-size: 0.85rem;
   border-radius: 999px;
@@ -173,9 +191,13 @@ textarea {
   font-family: "Space Grotesk", sans-serif;
 }
 
-.inline-form input {
-  min-width: 260px;
-  flex: 1;
+.inline-form > .field-group {
+  min-width: 220px;
+}
+
+.inline-form > .field-group input,
+.inline-form > .field-group select {
+  min-width: 0;
 }
 
 .models-toolbar {
@@ -195,17 +217,25 @@ textarea {
   display: flex;
   flex-wrap: wrap;
   gap: 0.55rem;
-  align-items: center;
+  align-items: flex-end;
 }
 
-.models-toolbar-main input {
-  min-width: 240px;
-  flex: 1;
-}
-
-.models-toolbar-main select {
-  width: auto;
+.toolbar-field {
   min-width: 170px;
+}
+
+.toolbar-field-search {
+  flex: 1;
+  min-width: 240px;
+}
+
+.toolbar-field-compact {
+  width: min(240px, 100%);
+}
+
+.view-toggle-group {
+  display: grid;
+  gap: 0.35rem;
 }
 
 .view-toggle {
@@ -272,6 +302,11 @@ textarea {
   background: rgba(11, 22, 34, 0.92);
   border-radius: 14px;
   padding: 0.9rem;
+}
+
+.card-interactive,
+.model-row-interactive {
+  cursor: pointer;
 }
 
 .card-selected {
@@ -448,6 +483,10 @@ textarea {
   gap: 0.75rem;
 }
 
+.details-panel {
+  scroll-margin-top: 1rem;
+}
+
   .model-info-block {
     border: 1px solid var(--border);
     border-radius: 10px;
@@ -526,6 +565,32 @@ textarea {
   font-size: 0.8rem;
 }
 
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+.chip:focus-visible,
+.card-interactive:focus-visible,
+.model-row-interactive:focus-visible,
+a:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--focus-shadow);
+}
+
+.btn:focus-visible,
+.chip:focus-visible {
+  transform: translateY(-1px);
+}
+
+.btn:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+  cursor: not-allowed;
+}
+
 @keyframes drift {
   from {
     transform: translateY(0px) translateX(0px);
@@ -577,7 +642,7 @@ textarea {
     align-items: stretch;
   }
 
-  .models-toolbar-main select {
+  .toolbar-field-compact {
     width: 100%;
   }
 

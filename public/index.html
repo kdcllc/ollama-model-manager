@@ -22,6 +22,95 @@
 
     <main class="layout">
       <section class="panel">
+        <h2>Install or Update Model</h2>
+        <form id="pullForm" class="inline-form">
+          <div class="field-group field-grow">
+            <label for="pullName" class="field-label">Model name or tag</label>
+            <input
+              id="pullName"
+              type="text"
+              placeholder="Example: llama3.2:3b-instruct-q4_K_M"
+              required
+            />
+          </div>
+          <button type="submit" class="btn btn-primary">Pull or Update</button>
+        </form>
+        <p class="hint">Tip: Pulling an existing model updates it to the latest available tag.</p>
+      </section>
+
+      <section class="panel">
+        <h2>Installed Models</h2>
+        <div class="models-toolbar">
+          <div class="models-toolbar-main">
+            <div class="field-group toolbar-field toolbar-field-search">
+              <label for="modelSearchInput" class="field-label">Search installed models</label>
+              <input id="modelSearchInput" type="search" placeholder="Search models, tags, tiers..." />
+            </div>
+            <button id="clearModelSearchBtn" class="btn btn-small" type="button">Clear</button>
+            <div class="field-group toolbar-field toolbar-field-compact">
+              <label for="modelSortSelect" class="field-label">Sort installed models</label>
+              <select id="modelSortSelect">
+                <option value="updated-desc">Newest Updated</option>
+                <option value="name-asc">Name (A-Z)</option>
+                <option value="size-desc">Size (Largest)</option>
+                <option value="size-asc">Size (Smallest)</option>
+              </select>
+            </div>
+            <div class="view-toggle-group">
+              <span class="field-label">View mode</span>
+              <div class="view-toggle" role="group" aria-label="Model display mode">
+                <button id="viewCardsBtn" class="btn btn-small btn-primary" type="button">Cards</button>
+                <button id="viewListBtn" class="btn btn-small" type="button">Compact</button>
+              </div>
+            </div>
+          </div>
+          <div id="modelFilterChips" class="chips-row"></div>
+          <div id="modelsSummary" class="hint"></div>
+        </div>
+        <div id="modelsGrid" class="model-groups"></div>
+      </section>
+
+      <section class="panel details-panel" id="detailsPanel" tabindex="-1" aria-labelledby="detailsHeading">
+        <h2 id="detailsHeading" tabindex="-1">Model Details</h2>
+        <div id="detailsContent" class="details-empty" aria-live="polite">
+          No model selected. Choose a model above to inspect metadata, update it, or delete it.
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Create Custom Model</h2>
+        <form id="createForm" class="stack-form">
+          <div class="field-group">
+            <label for="createName" class="field-label">Custom model name</label>
+            <input
+              id="createName"
+              type="text"
+              placeholder="Example: my-team/coding-assistant"
+              required
+            />
+          </div>
+          <div class="field-group">
+            <label for="createModelfile" class="field-label">Modelfile contents</label>
+            <textarea
+              id="createModelfile"
+              rows="6"
+              placeholder="FROM llama3.2:3b-instruct-q4_K_M\nSYSTEM &quot;You are a precise coding assistant.&quot;\nPARAMETER temperature 0.2"
+              required
+            ></textarea>
+          </div>
+          <div class="actions-row">
+            <button type="submit" class="btn btn-primary">Create Model</button>
+          </div>
+        </form>
+        <p class="hint">Use standard Ollama Modelfile directives such as FROM, SYSTEM, and PARAMETER.</p>
+      </section>
+
+      <section class="panel">
+        <h2>Activity</h2>
+        <pre id="activityLog" class="log"></pre>
+      </section>
+
+      <section class="panel">
         <h2>System Profile and Recommendations</h2>
         <div id="systemSummary" class="hint">Loading system profile...</div>
         <div id="setupGuidance" class="hint"></div>
@@ -36,16 +125,22 @@
           </div>
         </div>
         <div class="inline-form">
-          <select id="kvCacheModeSelect">
-            <option value="adaptive">Adaptive</option>
-            <option value="q8_0">q8_0</option>
-            <option value="f16">f16</option>
-          </select>
-          <select id="flashAttentionModeSelect">
-            <option value="auto">Flash Attention Auto</option>
-            <option value="on">Flash Attention On</option>
-            <option value="off">Flash Attention Off</option>
-          </select>
+          <div class="field-group field-grow">
+            <label for="kvCacheModeSelect" class="field-label">KV cache mode</label>
+            <select id="kvCacheModeSelect">
+              <option value="adaptive">Adaptive</option>
+              <option value="q8_0">q8_0</option>
+              <option value="f16">f16</option>
+            </select>
+          </div>
+          <div class="field-group field-grow">
+            <label for="flashAttentionModeSelect" class="field-label">Flash attention mode</label>
+            <select id="flashAttentionModeSelect">
+              <option value="auto">Flash Attention Auto</option>
+              <option value="on">Flash Attention On</option>
+              <option value="off">Flash Attention Off</option>
+            </select>
+          </div>
           <button id="saveOptimizationBtn" class="btn btn-primary" type="button">
             Save Optimization Preferences
           </button>
@@ -68,75 +163,6 @@
         </div>
         <div id="gpuPanel" class="gpu-panel"></div>
       </section>
-
-      <section class="panel">
-        <h2>Install or Update Model</h2>
-        <form id="pullForm" class="inline-form">
-          <input
-            id="pullName"
-            type="text"
-            placeholder="Example: llama3.2:3b-instruct-q4_K_M"
-            required
-          />
-          <button type="submit" class="btn btn-primary">Pull or Update</button>
-        </form>
-        <p class="hint">Tip: Pulling an existing model updates it to the latest available tag.</p>
-      </section>
-
-      <section class="panel">
-        <h2>Create Custom Model</h2>
-        <form id="createForm" class="stack-form">
-          <input
-            id="createName"
-            type="text"
-            placeholder="Example: my-team/coding-assistant"
-            required
-          />
-          <textarea
-            id="createModelfile"
-            rows="6"
-            placeholder="FROM llama3.2:3b-instruct-q4_K_M\nSYSTEM \"You are a precise coding assistant.\"\nPARAMETER temperature 0.2"
-            required
-          ></textarea>
-          <div class="actions-row">
-            <button type="submit" class="btn btn-primary">Create Model</button>
-          </div>
-        </form>
-        <p class="hint">Use standard Ollama Modelfile directives such as FROM, SYSTEM, and PARAMETER.</p>
-      </section>
-
-      <section class="panel">
-        <h2>Installed Models</h2>
-        <div class="models-toolbar">
-          <div class="models-toolbar-main">
-            <input id="modelSearchInput" type="search" placeholder="Search models, tags, tiers..." />
-            <button id="clearModelSearchBtn" class="btn btn-small" type="button">Clear</button>
-            <select id="modelSortSelect" aria-label="Sort models">
-              <option value="updated-desc">Newest Updated</option>
-              <option value="name-asc">Name (A-Z)</option>
-              <option value="size-desc">Size (Largest)</option>
-              <option value="size-asc">Size (Smallest)</option>
-            </select>
-            <div class="view-toggle" role="group" aria-label="Model display mode">
-              <button id="viewCardsBtn" class="btn btn-small btn-primary" type="button">Cards</button>
-              <button id="viewListBtn" class="btn btn-small" type="button">Compact</button>
-            </div>
-          </div>
-          <div id="modelFilterChips" class="chips-row"></div>
-          <div id="modelsSummary" class="hint"></div>
-        </div>
-        <div id="modelsGrid" class="model-groups"></div>
-      </section>
-
-      <section class="panel" id="detailsPanel">
-        <h2>Model Details</h2>
-        <div id="detailsContent" class="details-empty">No model selected.</div>
-      </section>
-
-      <section class="panel">
-        <h2>Activity</h2>
-        <pre id="activityLog" class="log"></pre>
-      </section>
     </main>
 
     <template id="modelCardTemplate">
@@ -151,9 +177,9 @@
           <span class="model-updated"></span>
         </div>
         <div class="actions-row">
-          <button class="btn btn-small view-btn">Details</button>
-          <button class="btn btn-small btn-primary pull-btn">Update</button>
-          <button class="btn btn-small btn-danger delete-btn">Delete</button>
+          <button class="btn btn-small view-btn" type="button">Details</button>
+          <button class="btn btn-small btn-primary pull-btn" type="button">Update</button>
+          <button class="btn btn-small btn-danger delete-btn" type="button">Delete</button>
         </div>
       </article>
     </template>
